@@ -4,86 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GPS Data Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    /* Style pour la carte */
+    /* Style de la carte */
     #map {
-      height: 100vh; /* La carte prend toute la hauteur de l'écran */
-      width: 100%;   /* La carte prend toute la largeur de l'écran */
+      height: 100vh; /* Carte pleine hauteur */
+      width: 100%;   /* Carte pleine largeur */
     }
   </style>
-  <!-- Ajout de la bibliothèque Supabase -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.6.3/supabase.min.js"></script>
-  <!-- Ajout de l'API Google Maps -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
 </head>
 <body>
-  <!-- Conteneur pour la carte -->
   <div id="map"></div>
 
-  <script>
-    // Configuration de Supabase
-    const supabaseUrl = 'https://YOUR_SUPABASE_PROJECT_URL';
-    const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // Clé publique (ANON) de Supabase
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-    // Initialisation de la carte Google Maps
-    function initMap() {
-      // Création d'une nouvelle carte centrée sur une localisation par défaut (ex: Paris)
-      const map = new google.maps.Map(document.getElementById('map'), {
-        center: { lat: 48.8566, lng: 2.3522 }, // Coordonées de Paris
-        zoom: 12, // Niveau de zoom initial
-      });
-
-      // Récupération des données GPS depuis Supabase
-      fetchGpsData().then((gpsData) => {
-        // Ajout de marqueurs sur la carte pour chaque point GPS
-        gpsData.forEach((point) => {
-          const marker = new google.maps.Marker({
-            position: { lat: point.latitude, lng: point.longitude },
-            map: map,
-            title: `Device ID: ${point.device_id}\nLatitude: ${point.latitude}\nLongitude: ${point.longitude}`,
-          });
-
-          // Ajout d'une fenêtre d'information au clic sur le marqueur
-          const infoWindow = new google.maps.InfoWindow({
-            content: `
-              <div>
-                <strong>Device ID:</strong> ${point.device_id}<br>
-                <strong>Latitude:</strong> ${point.latitude}<br>
-                <strong>Longitude:</strong> ${point.longitude}<br>
-                <strong>Timestamp:</strong> ${point.timestamp}
-              </div>
-            `,
-          });
-
-          marker.addListener('click', () => {
-            infoWindow.open(map, marker);
-          });
-        });
-      });
-    }
-
-    // Fonction pour récupérer les données GPS depuis Supabase
-    async function fetchGpsData() {
-      try {
-        const { data, error } = await supabase
-          .from('gps_data') // Nom de la table
-          .select('*'); // Sélectionne toutes les colonnes
-
-        if (error) {
-          console.error('Erreur lors de la récupération des données:', error);
-          return [];
-        }
-
-        return data;
-      } catch (err) {
-        console.error('Erreur lors de la récupération des données:', err);
-        return [];
-      }
-    }
-
-    // Chargement de la carte après le chargement de la page
-    window.onload = initMap;
-  </script>
+  <!-- Inclure la bibliothèque Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Inclure votre script.js -->
+  <script src="script.js"></script>
 </body>
 </html>
