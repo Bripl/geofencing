@@ -1,6 +1,8 @@
 // Initialisation de la carte Leaflet
 const map = L.map('map').setView([48.8566, 2.3522], 12); // Centré sur Paris avec un zoom de 12
 
+console.log("Carte initialisée");
+
 // Ajouter les tuiles OpenStreetMap
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -22,6 +24,7 @@ const drawControl = new L.Control.Draw({
 });
 
 map.addControl(drawControl); // Ajouter le contrôle de dessin sur la carte
+console.log("Contrôle de dessin ajouté à la carte");
 
 // Écouter l'événement de fin de dessin
 map.on('draw:created', async function (event) {
@@ -43,6 +46,7 @@ map.on('draw:created', async function (event) {
 
 // Fonction pour enregistrer le polygone dans Supabase
 async function savePolygonToDatabase(polygonCoordinates) {
+  console.log("Envoi du polygone à Supabase", polygonCoordinates);
   const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/api/save-geofencing', { // URL de votre endpoint
     method: 'POST',
     headers: {
