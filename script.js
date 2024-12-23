@@ -1,4 +1,4 @@
-// Vérifier sur quelle page on se trouve en fonction du titre de la page
+// Vérifier sur quelle page on se trouve
 const pageTitle = document.title; // 'Dessiner un polygone' ou 'Affichage des points GPS'
 
 // Initialisation de la carte Leaflet
@@ -42,7 +42,7 @@ if (pageTitle === "Dessiner un polygone") {
 
   // Fonction pour enregistrer le polygone dans Supabase
   async function savePolygonToDatabase(polygonCoordinates) {
-    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/api/save-geofencing', { // URL de votre endpoint
+    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/api/save-geofencing', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
