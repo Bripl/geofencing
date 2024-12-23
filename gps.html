@@ -10,7 +10,17 @@
   <h1>Show GPS Points</h1>
   <div id="map" style="height: 600px;"></div>
 
+  <!-- Bouton pour revenir à la page Draw Polygon -->
+  <button id="backToGeoFencingBtn">Retour à la carte de géofencing</button>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="script.js"></script>
+
+  <script>
+    // Redirection vers la page de dessin de polygone au clic sur le bouton
+    document.getElementById('backToGeoFencingBtn').addEventListener('click', function() {
+      window.location.href = 'draw_polygon.html'; // Redirige vers la page draw_polygon.html
+    });
+  </script>
 </body>
 </html>

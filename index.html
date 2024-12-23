@@ -11,8 +11,18 @@
   <h1>Draw Polygon</h1>
   <div id="map" style="height: 600px;"></div>
 
+  <!-- Bouton pour passer à la page Show GPS Points -->
+  <button id="viewGpsPointsBtn">Voir les points GPS</button>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script src="script.js"></script>
+
+  <script>
+    // Redirection vers la page des points GPS au clic sur le bouton
+    document.getElementById('viewGpsPointsBtn').addEventListener('click', function() {
+      window.location.href = 'show_gps_points.html'; // Redirige vers la page show_gps_points.html
+    });
+  </script>
 </body>
 </html>
