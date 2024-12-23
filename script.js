@@ -9,7 +9,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Fonction pour récupérer les données GPS depuis votre backend
 async function fetchGpsData() {
   try {
-    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/api/gps-data'); // URL de votre backend Heroku
+    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/GPS'); // URL de votre backend Heroku
     const data = await response.json();
 
     if (!response.ok) {
