@@ -1,5 +1,5 @@
-// Vérifier sur quelle page on se trouve
-const pageTitle = document.title; // 'Dessiner un polygone' ou 'Affichage des points GPS'
+// Vérifier le titre de la page pour savoir de quelle page il s'agit
+const pageTitle = document.title; // "Draw Polygon" ou "Show GPS Points"
 
 // Initialisation de la carte Leaflet
 const map = L.map('map').setView([48.8566, 2.3522], 12); // Centré sur Paris avec un zoom de 12
@@ -9,8 +9,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 }).addTo(map);
 
-// Logique pour la page de dessin de polygones
-if (pageTitle === "Dessiner un polygone") {
+// Si on est sur la page pour dessiner des polygones
+if (pageTitle === "Draw Polygon") {
   // Initialisation du contrôle de dessin
   const drawnItems = new L.FeatureGroup().addTo(map); // Groupe pour contenir les objets dessinés
   const drawControl = new L.Control.Draw({
@@ -62,8 +62,8 @@ if (pageTitle === "Dessiner un polygone") {
     }
   }
 
-} else if (pageTitle === "Affichage des points GPS") {
-  // Logique pour la page d'affichage des points GPS
+} else if (pageTitle === "Show GPS Points") {
+  // Si on est sur la page d'affichage des points GPS
   async function fetchAndDisplayPoints() {
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/api/gps'); // URL pour récupérer les données GPS
 
