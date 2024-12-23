@@ -6,42 +6,75 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 }).addTo(map);
 
-// Fonction pour récupérer les données GPS depuis votre backend
-async function fetchGpsData() {
-  try {
-    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/GPS'); // URL de votre backend Heroku
-    const data = await response.json();
+// Initialisation du contrôle de dessin
+const drawnItems = new L.FeatureGroup().addTo(map); // Groupe pour contenir les objets dessinés
+const drawControl = new L.Control.Draw({
+  edit: {
+    featureGroup: drawnItems, // La fonctionnalité de modification affecte le groupe "drawnItems"
+  },
+  draw: {
+    polygon: true, // Autoriser le dessin de polygones
+    rectangle: false, // Désactiver les rectangles (vous pouvez activer si nécessaire)
+    circle: false, // Désactiver les cercles
+    marker: false, // Désactiver les marqueurs
+    polyline: false, // Désactiver les polylignes
+  },
+}).addTo(map);
 
-    if (!response.ok) {
-      console.error('Erreur lors de la récupération des données:', data.error);
-      return [];
-    }
+// Écouter l'événement de fin de dessin
+map.on('draw:created', async function (event) {
+  const layer = event.layer;
+  drawnItems.addLayer(layer); // Ajouter le polygone au groupe
 
-    return data;
-  } catch (err) {
-    console.error('Erreur lors de la récupération des données:', err);
-    return [];
+  const polygonCoordinates = layer.getLatLngs()[0].map(latlng => [latlng.lng, latlng.lat]); // Convertir en format [longitude, latitude]
+
+  // Envoyer le polygone à Supabase
+  await savePolygonToDatabase(polygonCoordinates);
+
+  // Ajouter une popup pour afficher le polygone
+  layer.bindPopup('Polygone dessiné').openPopup();
+});
+
+// Fonction pour enregistrer le polygone dans Supabase
+async function savePolygonToDatabase(polygonCoordinates) {
+  const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com//api/save-geofencing', { // URL de votre endpoint
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      polygone: {
+        type: 'Polygon',
+        coordinates: [polygonCoordinates] // Format GeoJSON
+      }
+    }),
+  });
+
+  if (response.ok) {
+    console.log('Polygone enregistré avec succès dans Supabase');
+  } else {
+    console.error('Erreur lors de l\'enregistrement du polygone');
   }
 }
 
-// Afficher les données GPS sur la carte
-async function displayGpsData() {
-  const gpsData = await fetchGpsData(); // Récupérer les données GPS depuis le backend
+// Fonction pour récupérer et afficher les polygones depuis Supabase
+async function fetchAndDisplayPolygons() {
+  const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com//api/geofencing'); // URL de votre backend pour récupérer les polygones
 
-  gpsData.forEach((point) => {
-    const marker = L.marker([point.latitude, point.longitude]).addTo(map); // Ajouter un marqueur pour chaque point GPS
+  if (!response.ok) {
+    console.error('Erreur lors de la récupération des polygones:', response.statusText);
+    return;
+  }
 
-    // Ajouter une popup avec des informations sur le point
-    marker.bindPopup(`
-      <div>
-        <strong>Device ID:</strong> ${point.device_id}<br>
-        <strong>Latitude:</strong> ${point.latitude}<br>
-        <strong>Longitude:</strong> ${point.longitude}<br>
-        <strong>Timestamp:</strong> ${point.timestamp}
-      </div>
-    `);
+  const data = await response.json();
+
+  data.forEach(polygonData => {
+    const latLngs = polygonData.polygone.coordinates[0].map(coord => [coord[1], coord[0]]);
+    const polygon = L.polygon(latLngs, { color: 'red', fillColor: 'blue', fillOpacity: 0.3 }).addTo(map);
+
+    polygon.bindPopup('Polygone enregistré');
   });
 }
 
-// Charger et afficher les données GPS
-displayGpsData();
+// Appeler la fonction pour afficher les polygones à partir de la base de données
+fetchAndDisplayPolygons();
