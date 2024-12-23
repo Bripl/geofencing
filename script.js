@@ -17,12 +17,15 @@ const drawControl = new L.Control.Draw({
     rectangle: false, // Désactiver les rectangles (vous pouvez activer si nécessaire)
     circle: false, // Désactiver les cercles
     marker: false, // Désactiver les marqueurs
-    polyline: false, // Désactiver les polylignes
+    polyline: false, // Désactiver les polylines
   },
-}).addTo(map);
+});
+
+map.addControl(drawControl); // Ajouter le contrôle de dessin sur la carte
 
 // Écouter l'événement de fin de dessin
 map.on('draw:created', async function (event) {
+  console.log('Polygone créé');  // Vérifier si l'événement est bien déclenché
   const layer = event.layer;
   drawnItems.addLayer(layer); // Ajouter le polygone au groupe
 
@@ -33,11 +36,14 @@ map.on('draw:created', async function (event) {
 
   // Ajouter une popup pour afficher le polygone
   layer.bindPopup('Polygone dessiné').openPopup();
+
+  // Ajuste la vue de la carte pour englober tous les objets dessinés
+  map.fitBounds(drawnItems.getBounds());
 });
 
 // Fonction pour enregistrer le polygone dans Supabase
 async function savePolygonToDatabase(polygonCoordinates) {
-  const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com//api/save-geofencing', { // URL de votre endpoint
+  const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/api/save-geofencing', { // URL de votre endpoint
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -59,7 +65,7 @@ async function savePolygonToDatabase(polygonCoordinates) {
 
 // Fonction pour récupérer et afficher les polygones depuis Supabase
 async function fetchAndDisplayPolygons() {
-  const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com//api/geofencing'); // URL de votre backend pour récupérer les polygones
+  const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/api/geofencing'); // URL de votre backend pour récupérer les polygones
 
   if (!response.ok) {
     console.error('Erreur lors de la récupération des polygones:', response.statusText);
