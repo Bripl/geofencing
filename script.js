@@ -65,7 +65,7 @@ if (pageTitle === "Draw Polygon") {
 } else if (pageTitle === "Show GPS Points") {
   // Si on est sur la page d'affichage des points GPS
   async function fetchAndDisplayPoints() {
-    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/api/gps'); // URL pour récupérer les données GPS
+    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/GPS'); // URL pour récupérer les données GPS
 
     if (!response.ok) {
       console.error('Erreur lors de la récupération des points GPS:', response.statusText);
