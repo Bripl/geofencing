@@ -3,26 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Draw Polygon</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <title>Index</title>
 </head>
 <body>
-  <h1>Draw Polygon</h1>
-  <div id="map" style="height: 600px;"></div>
-
-  <!-- Bouton pour passer à la page Show GPS Points -->
-  <button id="viewGpsPointsBtn">Voir les points GPS</button>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-  <script src="script.js"></script>
-
-  <script>
-    // Redirection vers la page des points GPS au clic sur le bouton
-    document.getElementById('viewGpsPointsBtn').addEventListener('click', function() {
-      window.location.href = 'show_gps_points.html'; // Redirige vers la page show_gps_points.html
-    });
-  </script>
+  <h1>Bienvenue sur l'application de géofencing</h1>
+  <p>Sélectionnez une action :</p>
+  <ul>
+    <li><a href="draw_polygon.html">Tracer un polygone</a></li>
+    <li><a href="show_gps_points.html">Afficher les points GPS</a></li>
+  </ul>
 </body>
 </html>
