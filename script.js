@@ -2,13 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const pageTitle = document.title;
 
   // Initialisation de la carte
-  const mapElement = document.getElementById('map');
-  if (mapElement) {
-    const map = L.map(mapElement).setView([48.8566, 2.3522], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
-  }
+  const map = L.map('map').setView([48.8566, 2.3522], 12); // Paris par défaut
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map);
 
   // --- Gestion du dessin de polygones pour 'Draw Polygon' ---
   if (pageTitle === 'Draw Polygon') {
@@ -37,23 +34,21 @@ document.addEventListener('DOMContentLoaded', () => {
       // Demander à l'utilisateur de saisir un nom pour le polygone
       const polygonName = prompt('Entrez le nom du polygone:');
       if (polygonName) {
-        // Enregistrer le polygone dans Supabase (en s'assurant que Supabase est défini)
-        if (typeof supabase !== 'undefined') {
-          const { data, error } = await supabase
-            .from('geofencing')
-            .insert([{
+        // Enregistrer le polygone dans Supabase
+        const { data, error } = await supabase
+          .from('geofencing')
+          .insert([
+            {
               name: polygonName,
               polygon: polygonCoordinates,
-              active: true, // On peut initialiser à "actif" ou selon les besoins
-            }]);
+              active: true,  // On peut initialiser à "actif"
+            },
+          ]);
 
-          if (error) {
-            console.error('Erreur lors de l\'enregistrement du polygone:', error);
-          } else {
-            alert('Polygone enregistré avec succès !');
-          }
+        if (error) {
+          console.error('Erreur lors de l\'enregistrement du polygone:', error);
         } else {
-          console.error('Supabase non défini');
+          alert('Polygone enregistré avec succès !');
         }
       } else {
         alert('Le nom du polygone est requis.');
@@ -67,9 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const drawnItems = new L.FeatureGroup().addTo(map);
 
     async function fetchPolygons() {
-      // Affichage d'un message de chargement
-      polygonsListContainer.innerHTML = '<p>Chargement des polygones...</p>';
-
       try {
         const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing');
         if (response.ok) {
@@ -90,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayPolygons(polygons) {
-      polygonsListContainer.innerHTML = ''; // Réinitialiser la liste des polygones
+      polygonsListContainer.innerHTML = '';
 
       polygons.forEach(polygon => {
         const polygonName = polygon.name || 'Polygone sans nom';
@@ -107,17 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Ajouter le polygone sur la carte
         if (polygon.polygon && polygon.polygon.type === 'Polygon') {
-          const geoJsonLayer = L.geoJSON(polygon.polygon, {
-            onEachFeature: (feature, layer) => {
-              // Ajouter un popup pour chaque polygone
-              layer.bindPopup(`
-                <b>Nom:</b> ${polygonName} <br>
-                <b>Status:</b> ${polygon.active ? 'Actif' : 'Inactif'} <br>
-                <button onclick="activatePolygon('${polygon.id}', ${polygon.active})">${polygon.active ? 'Désactiver' : 'Activer'}</button>
-                <button onclick="deletePolygon('${polygon.id}')">Supprimer</button>
-              `);
-            }
-          }).addTo(map);
+          const geoJsonLayer = L.geoJSON(polygon.polygon).addTo(map);
         } else {
           console.error(`Données de polygone non valides pour l'ID ${polygon.id}`);
         }
@@ -138,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
           alert(newStatus ? 'Polygone activé avec succès.' : 'Polygone désactivé avec succès.');
-          fetchPolygons();  // Réactualise la liste des polygones
+          fetchPolygons();
         } else {
           console.error('Erreur lors de l\'activation du polygone');
         }
@@ -156,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
           alert('Polygone supprimé avec succès.');
-          fetchPolygons();  // Réactualise la liste des polygones
+          fetchPolygons();
         } else {
           console.error('Erreur lors de la suppression du polygone');
         }
@@ -165,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
-    fetchPolygons();  // Charger les polygones au démarrage
+    fetchPolygons();
   }
 
   // --- Gestion des points GPS pour 'Show GPS Points' ---
@@ -175,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/GPS');
         if (response.ok) {
           const data = await response.json();
-          console.log(data); // Afficher les données récupérées pour vérifier la structure
           if (data.length === 0) {
             alert('Aucun point GPS disponible.');
           } else {
@@ -192,17 +173,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayGPSPoints(points) {
       points.forEach(point => {
         const { latitude, longitude } = point;
-        const marker = L.marker([latitude, longitude]).addTo(map);
-
-        // Ajouter un popup pour chaque point
-        marker.bindPopup(`
-          <b>Device ID:</b> ${point.device_id} <br>
-          <b>Timestamp:</b> ${point.timestamp} <br>
-          <b>Geo-fence Status:</b> ${point.geo_fence_status}
-        `);
+        if (latitude && longitude) {
+          const marker = L.marker([latitude, longitude]).addTo(map);
+          marker.bindPopup(`
+            <b>Device ID:</b> ${point.device_id} <br>
+            <b>Timestamp:</b> ${point.timestamp} <br>
+            <b>Geo-fence Status:</b> ${point.geofencing_status ? 'Entrée' : 'Sortie'}
+          `);
+        }
       });
     }
 
-    fetchGPSData();  // Charger les points GPS au démarrage
+    fetchGPSData();
   }
 });
