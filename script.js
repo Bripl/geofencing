@@ -46,12 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
           <button onclick="deletePolygon('${polygon.id}')">Supprimer</button>
         `;
 
-        if (polygon.polygone && polygon.polygone.type === 'Polygon') {
-          const geoJsonLayer = L.geoJSON(polygon.polygone).addTo(map);
-          geoJsonLayer.bindPopup(`Nom: ${polygonName}`);
-        } else {
-          console.error(`Données de polygone non valides pour l'ID ${polygon.id}`);
-        }
+        if (polygon.polygon && polygon.polygon.type === 'Polygon') {
+  const geoJsonLayer = L.geoJSON(polygon.polygon).addTo(map);
+  geoJsonLayer.bindPopup(`Nom: ${polygonName}`);
+} else {
+  console.error(`Données de polygone non valides pour l'ID ${polygon.id}`);
+}
+
 
         polygonsListContainer.appendChild(polygonItem);
       });
