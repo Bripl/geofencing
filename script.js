@@ -39,31 +39,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Fonction pour enregistrer un polygone dans le backend
   async function savePolygon(layer, polygonName) {
-    try {
-      if (!polygonName) {
-        alert('Veuillez entrer un nom pour le polygone.');
-        return;
-      }
-
-      const geojson = layer.toGeoJSON();
-      console.log('GeoJSON généré pour le polygone :', geojson);
-
-      const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: polygonName, polygon: geojson })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'enregistrement du polygone.');
-      }
-
-      alert('Polygone enregistré avec succès');
-    } catch (error) {
-      console.error('Erreur lors de l\'enregistrement du polygone:', error);
-      alert('Erreur lors de l\'enregistrement du polygone.');
+  try {
+    if (!polygonName) {
+      alert('Veuillez entrer un nom pour le polygone.');
+      return;
     }
+
+    const geojson = layer.toGeoJSON();
+    console.log('GeoJSON généré pour le polygone :', geojson);
+
+    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: polygonName, polygon: geojson }),
+    });
+
+    if (!response.ok) {
+      const errorMessage = await response.text();
+      throw new Error(errorMessage || "Erreur lors de l'enregistrement du polygone.");
+    }
+
+    alert('Polygone enregistré avec succès');
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement du polygone:", error);
+    alert("Erreur lors de l'enregistrement du polygone.");
   }
+}
 
   // Gestion des événements de dessin
   map.on('draw:created', (event) => {
@@ -82,19 +83,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Récupérer et afficher les polygones existants
   async function fetchPolygons() {
-    try {
-      const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing');
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des polygones.');
-      }
+  try {
+    const polygonsListContainer = document.getElementById('polygons-list');
+    if (!polygonsListContainer) {
+      console.error("Le conteneur des polygones n'a pas été trouvé.");
+      return;
+    }
 
+    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing');
+    console.log('Réponse brute:', response);
+    if (response.ok) {
       const data = await response.json();
       console.log('Polygones récupérés:', data);
       displayPolygons(data);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des polygones:', error);
+    } else {
+      polygonsListContainer.innerHTML = '<p>Erreur lors de la récupération des polygones.</p>';
     }
+  } catch (error) {
+    console.error('Erreur lors de la récupération des polygones:', error);
   }
+}
 
   function displayPolygons(polygons) {
     const polygonsListContainer = document.getElementById('polygons-list');
