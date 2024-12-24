@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
   const pageTitle = document.title;
 
+  // Initialisation de la carte
   const map = L.map('map').setView([48.8566, 2.3522], 12);
-
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
 
-  // Gestion des polygones
+  // --- Gestion des polygones pour 'Manage Geofencing Polygons' ---
   if (pageTitle === 'Manage Geofencing Polygons') {
     const polygonsListContainer = document.getElementById('polygons-list');
 
@@ -47,12 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         if (polygon.polygon && polygon.polygon.type === 'Polygon') {
-  const geoJsonLayer = L.geoJSON(polygon.polygon).addTo(map);
-  geoJsonLayer.bindPopup(`Nom: ${polygonName}`);
-} else {
-  console.error(`Données de polygone non valides pour l'ID ${polygon.id}`);
-}
-
+          const geoJsonLayer = L.geoJSON(polygon.polygon).addTo(map);
+          geoJsonLayer.bindPopup(`Nom: ${polygonName}`);
+        } else {
+          console.error(`Données de polygone non valides pour l'ID ${polygon.id}`);
+        }
 
         polygonsListContainer.appendChild(polygonItem);
       });
@@ -96,4 +95,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchPolygons();
   }
+
+  // --- Gestion des points GPS pour 'Show GPS Points' ---
+  if (pageTitle === 'Show GPS Points') {
+    async function fetchGPSData() {
+      try {
+        const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/GPS');
+        if (response.ok) {
+          const data = await response.json();
+          console.log(data); // Afficher les données récupérées pour vérifier la structure
+          if (data.length === 0) {
+            alert('Aucun point GPS disponible.');
+          } else {
+            displayGPSPoints(data);
+          }
+        } else {
+          console.error('Erreur lors de la récupération des points GPS');
+        }
+      } catch (error) {
+        console.error('Erreur de connexion au serveur:', error);
+      }
+    }
+
+    function displayGPSPoints(points) {
+      points.forEach(point => {
+        const { latitude, longitude } = point;
+        const marker = L.marker([latitude, longitude]).addTo(map);
+
+        // Ajouter un popup pour chaque point
+        marker.bindPopup(`
+          <b>Device ID:</b> ${point.device_id} <br>
+          <b>Timestamp:</b> ${point.timestamp} <br>
+          <b>Geo-fence Status:</b> ${point.geo_fence_status}
+        `);
+      });
+    }
+
+    fetchGPSData();
+  }
+
+  // --- Gestion du dessin de polygones pour 'Draw Polygon' ---
+  if (pageTitle === 'Draw Polygon') {
+    // Ajouter le contrôle de dessin à la carte
+    const drawnItems = new L.FeatureGroup().addTo(map);
+
+    const drawControl = new L.Control.Draw({
+      edit: {
+        featureGroup: drawnItems,
+      },
+      draw: {
+        polygon: true,
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+      },
+    }).addTo(map);
+
+    map.on(L.Draw.Event.CREATED, function (event) {
+      const layer = event.layer;
+      drawnItems.addLayer(layer);
+    });
+  }
+
 });
