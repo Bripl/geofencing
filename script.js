@@ -25,37 +25,73 @@ document.addEventListener('DOMContentLoaded', () => {
       },
     }).addTo(map);
 
-    map.on('draw:created', async function (event) {
-      const layer = event.layer;
-      drawnItems.addLayer(layer);
+    let currentPolygon = null; // Pour suivre le polygone actuel
 
-      const polygonCoordinates = layer.getLatLngs()[0].map(latlng => [latlng.lng, latlng.lat]);
+    map.on('draw:created', function (event) {
+      // Supprime le polygone précédent si un nouveau est dessiné
+      drawnItems.clearLayers();
+      currentPolygon = event.layer;
+      drawnItems.addLayer(currentPolygon);
+    });
 
-      // Envoi des coordonnées au backend
-      await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          polygone: {
-            type: 'Polygon',
-            coordinates: [polygonCoordinates],
-          },
-        }),
-      });
+    // Gestion du formulaire d'envoi des polygones
+    const polygonForm = document.getElementById('polygonForm');
+    polygonForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      if (!currentPolygon) {
+        alert('Veuillez dessiner un polygone avant de l\'enregistrer.');
+        return;
+      }
+
+      const polygonName = document.getElementById('polygonName').value;
+      const polygonCoordinates = currentPolygon.getLatLngs()[0].map(latlng => [latlng.lng, latlng.lat]);
+
+      try {
+        const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: polygonName,
+            polygone: {
+              type: 'Polygon',
+              coordinates: [polygonCoordinates],
+            },
+          }),
+        });
+
+        if (response.ok) {
+          alert('Polygone enregistré avec succès');
+          polygonForm.reset();
+          drawnItems.clearLayers();
+          currentPolygon = null;
+        } else {
+          const errorMessage = await response.text();
+          console.error('Erreur lors de l\'enregistrement du polygone:', errorMessage);
+          alert('Erreur lors de l\'enregistrement du polygone.');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la requête:', error);
+        alert('Une erreur est survenue lors de la sauvegarde du polygone.');
+      }
     });
 
   } else if (pageTitle === 'Show GPS Points') {
     // Fonctionnalités pour afficher les points GPS
     async function fetchGPSData() {
-      const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/GPS');
-      if (response.ok) {
-        const data = await response.json();
-        data.forEach(point => {
-          const marker = L.marker([point.latitude, point.longitude]).addTo(map);
-          marker.bindPopup(`Appareil: ${point.device_id}<br>Latitude: ${point.latitude}<br>Longitude: ${point.longitude}`);
-        });
-      } else {
-        console.error('Erreur lors de la récupération des points GPS');
+      try {
+        const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/GPS');
+        if (response.ok) {
+          const data = await response.json();
+          data.forEach(point => {
+            const marker = L.marker([point.latitude, point.longitude]).addTo(map);
+            marker.bindPopup(`Appareil: ${point.device_id}<br>Latitude: ${point.latitude}<br>Longitude: ${point.longitude}`);
+          });
+        } else {
+          console.error('Erreur lors de la récupération des points GPS');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération des points GPS:', error);
       }
     }
 
