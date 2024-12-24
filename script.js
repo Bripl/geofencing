@@ -2,10 +2,64 @@ document.addEventListener('DOMContentLoaded', () => {
   const pageTitle = document.title;
 
   // Initialisation de la carte
-  const map = L.map('map').setView([48.8566, 2.3522], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(map);
+  const mapElement = document.getElementById('map');
+  if (mapElement) {
+    const map = L.map(mapElement).setView([48.8566, 2.3522], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+  }
+
+  // --- Gestion du dessin de polygones pour 'Draw Polygon' ---
+  if (pageTitle === 'Draw Polygon') {
+    const drawnItems = new L.FeatureGroup().addTo(map);
+
+    const drawControl = new L.Control.Draw({
+      edit: {
+        featureGroup: drawnItems,
+      },
+      draw: {
+        polygon: true,
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+      },
+    }).addTo(map);
+
+    map.on(L.Draw.Event.CREATED, async function (event) {
+      const layer = event.layer;
+      drawnItems.addLayer(layer);
+
+      // Extraire les coordonnées du polygone
+      const polygonCoordinates = layer.toGeoJSON().geometry.coordinates;
+
+      // Demander à l'utilisateur de saisir un nom pour le polygone
+      const polygonName = prompt('Entrez le nom du polygone:');
+      if (polygonName) {
+        // Enregistrer le polygone dans Supabase (en s'assurant que Supabase est défini)
+        if (typeof supabase !== 'undefined') {
+          const { data, error } = await supabase
+            .from('geofencing')
+            .insert([{
+              name: polygonName,
+              polygon: polygonCoordinates,
+              active: true, // On peut initialiser à "actif" ou selon les besoins
+            }]);
+
+          if (error) {
+            console.error('Erreur lors de l\'enregistrement du polygone:', error);
+          } else {
+            alert('Polygone enregistré avec succès !');
+          }
+        } else {
+          console.error('Supabase non défini');
+        }
+      } else {
+        alert('Le nom du polygone est requis.');
+      }
+    });
+  }
 
   // --- Gestion des polygones pour 'Manage Geofencing Polygons' ---
   if (pageTitle === 'Manage Geofencing Polygons') {
@@ -13,6 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const drawnItems = new L.FeatureGroup().addTo(map);
 
     async function fetchPolygons() {
+      // Affichage d'un message de chargement
+      polygonsListContainer.innerHTML = '<p>Chargement des polygones...</p>';
+
       try {
         const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing');
         if (response.ok) {
@@ -33,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayPolygons(polygons) {
-      polygonsListContainer.innerHTML = '';
+      polygonsListContainer.innerHTML = ''; // Réinitialiser la liste des polygones
 
       polygons.forEach(polygon => {
         const polygonName = polygon.name || 'Polygone sans nom';
@@ -81,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
           alert(newStatus ? 'Polygone activé avec succès.' : 'Polygone désactivé avec succès.');
-          fetchPolygons();
+          fetchPolygons();  // Réactualise la liste des polygones
         } else {
           console.error('Erreur lors de l\'activation du polygone');
         }
@@ -99,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
           alert('Polygone supprimé avec succès.');
-          fetchPolygons();
+          fetchPolygons();  // Réactualise la liste des polygones
         } else {
           console.error('Erreur lors de la suppression du polygone');
         }
@@ -108,11 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
-    fetchPolygons();
+    fetchPolygons();  // Charger les polygones au démarrage
   }
-
-});
-
 
   // --- Gestion des points GPS pour 'Show GPS Points' ---
   if (pageTitle === 'Show GPS Points') {
@@ -149,54 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    fetchGPSData();
+    fetchGPSData();  // Charger les points GPS au démarrage
   }
-
-  // --- Gestion du dessin de polygones pour 'Draw Polygon' ---
-  if (pageTitle === 'Draw Polygon') {
-  const drawnItems = new L.FeatureGroup().addTo(map);
-
-  const drawControl = new L.Control.Draw({
-    edit: {
-      featureGroup: drawnItems,
-    },
-    draw: {
-      polygon: true,
-      polyline: false,
-      rectangle: false,
-      circle: false,
-      marker: false,
-    },
-  }).addTo(map);
-
-  map.on(L.Draw.Event.CREATED, async function (event) {
-    const layer = event.layer;
-    drawnItems.addLayer(layer);
-
-    // Extraire les coordonnées du polygone
-    const polygonCoordinates = layer.toGeoJSON().geometry.coordinates;
-
-    // Demander à l'utilisateur de saisir un nom pour le polygone
-    const polygonName = prompt('Entrez le nom du polygone:');
-    if (polygonName) {
-      // Enregistrer le polygone dans Supabase
-      const { data, error } = await supabase
-        .from('geofencing')
-        .insert([
-          {
-            name: polygonName,
-            polygon: polygonCoordinates,
-            active: true,  // On peut initialiser à "actif" ou selon les besoins
-          },
-        ]);
-
-      if (error) {
-        console.error('Erreur lors de l\'enregistrement du polygone:', error);
-      } else {
-        alert('Polygone enregistré avec succès !');
-      }
-    } else {
-      alert('Le nom du polygone est requis.');
-    }
-  });
-}
+});
