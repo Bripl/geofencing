@@ -1,16 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
   const pageTitle = document.title;
 
-  // Initialisation de la carte
-  const map = L.map('map').setView([48.8566, 2.3522], 12); // Centré sur Paris
+  const map = L.map('map').setView([48.8566, 2.3522], 12);
 
-  // Ajouter les tuiles OpenStreetMap
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
 
   if (pageTitle === 'Manage Geofencing Polygons') {
-    // Fonctionnalités pour gérer les polygones
     const polygonsListContainer = document.getElementById('polygons-list');
 
     async function fetchPolygons() {
@@ -18,32 +15,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing');
         if (response.ok) {
           const data = await response.json();
-          displayPolygons(data);
+          if (data.length === 0) {
+            polygonsListContainer.innerHTML = '<p>Aucun polygone disponible.</p>';
+          } else {
+            displayPolygons(data);
+          }
         } else {
+          polygonsListContainer.innerHTML = '<p>Erreur lors de la récupération des polygones.</p>';
           console.error('Erreur lors de la récupération des polygones');
         }
       } catch (error) {
+        polygonsListContainer.innerHTML = '<p>Erreur de connexion au serveur.</p>';
         console.error('Erreur lors de la récupération des polygones:', error);
       }
     }
 
     function displayPolygons(polygons) {
-      polygonsListContainer.innerHTML = ''; // Vide la liste existante
+      polygonsListContainer.innerHTML = '';
 
       polygons.forEach(polygon => {
+        const polygonName = polygon.name || 'Polygone sans nom';
+
         const polygonItem = document.createElement('div');
         polygonItem.className = 'polygon-item';
 
-        // Affiche le nom et un bouton d'activation
         polygonItem.innerHTML = `
-          <span>Nom: ${polygon.name}</span>
+          <span>Nom: ${polygonName}</span>
           <button onclick="activatePolygon('${polygon.id}')">Activer</button>
           <button onclick="deletePolygon('${polygon.id}')">Supprimer</button>
         `;
 
-        // Ajout des coordonnées sur la carte
-        const geoJsonLayer = L.geoJSON(polygon.polygone).addTo(map);
-        geoJsonLayer.bindPopup(`Nom: ${polygon.name}`);
+        if (polygon.polygone && polygon.polygone.type === 'Polygon') {
+          const geoJsonLayer = L.geoJSON(polygon.polygone).addTo(map);
+          geoJsonLayer.bindPopup(`Nom: ${polygonName}`);
+        } else {
+          console.error(`Données de polygone non valides pour l'ID ${polygon.id}`);
+        }
 
         polygonsListContainer.appendChild(polygonItem);
       });
@@ -59,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
           alert('Polygone activé avec succès.');
-          fetchPolygons(); // Rafraîchit la liste des polygones
+          fetchPolygons();
         } else {
           console.error('Erreur lors de l\'activation du polygone');
         }
@@ -76,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
           alert('Polygone supprimé avec succès.');
-          fetchPolygons(); // Rafraîchit la liste des polygones
+          fetchPolygons();
         } else {
           console.error('Erreur lors de la suppression du polygone');
         }
