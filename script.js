@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialisation de la carte Leaflet centrée sur Paris
-  const map = L.map('map').setView([48.8566, 2.3522], 12); 
+  // Initialisation de la carte Leaflet
+  const map = L.map('map').setView([48.8566, 2.3522], 12); // Paris par défaut
   console.log('Carte Leaflet initialisée avec succès.');
 
   // Ajouter la couche OpenStreetMap
