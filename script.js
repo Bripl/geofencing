@@ -88,20 +88,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   const polygonsListContainer = document.getElementById('polygons-list');
 
   async function fetchPolygons() {
-    try {
-      const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing');
-      if (response.ok) {
-        const data = await response.json();
-        displayPolygons(data);
-      } else {
-        polygonsListContainer.innerHTML = '<p>Erreur lors de la récupération des polygones.</p>';
-        console.error('Erreur lors de la récupération des polygones');
-      }
-    } catch (error) {
-      polygonsListContainer.innerHTML = '<p>Erreur de connexion au serveur.</p>';
-      console.error('Erreur lors de la récupération des polygones:', error);
+  try {
+    const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing');
+    console.log('Réponse brute:', response);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Polygones récupérés:', data);
+      displayPolygons(data);
+    } else {
+      polygonsListContainer.innerHTML = '<p>Erreur lors de la récupération des polygones.</p>';
     }
+  } catch (error) {
+    console.error('Erreur lors de la récupération des polygones:', error);
   }
+}
+
 
   function displayPolygons(polygons) {
     polygonsListContainer.innerHTML = '';
