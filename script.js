@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
 
-  // Initialisation du Supabase client
+ // Initialisation du Supabase client
   const supabase = supabase.createClient(
     process.env.SUPABASE_URL, // Utilisation de la variable d'environnement SUPABASE_URL
     process.env.SUPABASE_API_KEY // Utilisation de la variable d'environnement SUPABASE_API_KEY
