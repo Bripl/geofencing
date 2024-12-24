@@ -154,26 +154,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Gestion du dessin de polygones pour 'Draw Polygon' ---
   if (pageTitle === 'Draw Polygon') {
-    // Ajouter le contrôle de dessin à la carte
-    const drawnItems = new L.FeatureGroup().addTo(map);
+  const drawnItems = new L.FeatureGroup().addTo(map);
 
-    const drawControl = new L.Control.Draw({
-      edit: {
-        featureGroup: drawnItems,
-      },
-      draw: {
-        polygon: true,
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        marker: false,
-      },
-    }).addTo(map);
+  const drawControl = new L.Control.Draw({
+    edit: {
+      featureGroup: drawnItems,
+    },
+    draw: {
+      polygon: true,
+      polyline: false,
+      rectangle: false,
+      circle: false,
+      marker: false,
+    },
+  }).addTo(map);
 
-    map.on(L.Draw.Event.CREATED, function (event) {
-      const layer = event.layer;
-      drawnItems.addLayer(layer);
-    });
-  }
+  map.on(L.Draw.Event.CREATED, async function (event) {
+    const layer = event.layer;
+    drawnItems.addLayer(layer);
+
+    // Extraire les coordonnées du polygone
+    const polygonCoordinates = layer.toGeoJSON().geometry.coordinates;
+
+    // Demander à l'utilisateur de saisir un nom pour le polygone
+    const polygonName = prompt('Entrez le nom du polygone:');
+    if (polygonName) {
+      // Enregistrer le polygone dans Supabase
+      const { data, error } = await supabase
+        .from('geofencing')
+        .insert([
+          {
+            name: polygonName,
+            polygon: polygonCoordinates,
+            active: true,  // On peut initialiser à "actif" ou selon les besoins
+          },
+        ]);
+
+      if (error) {
+        console.error('Erreur lors de l\'enregistrement du polygone:', error);
+      } else {
+        alert('Polygone enregistré avec succès !');
+      }
+    } else {
+      alert('Le nom du polygone est requis.');
+    }
+  });
+}
 
 });
