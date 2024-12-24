@@ -150,8 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchPolygons();
   }
 
-  // --- Gestion des points GPS pour 'Show GPS Points' ---
-  if (pageTitle === 'Show GPS Points') {
+   if (pageTitle === 'Show GPS Points') {
     async function fetchGPSData() {
       try {
         const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/GPS');
@@ -174,12 +173,22 @@ document.addEventListener('DOMContentLoaded', () => {
       points.forEach(point => {
         const { latitude, longitude } = point;
         if (latitude && longitude) {
-          const marker = L.marker([latitude, longitude]).addTo(map);
-          marker.bindPopup(`
-            <b>Device ID:</b> ${point.device_id} <br>
-            <b>Timestamp:</b> ${point.timestamp} <br>
-            <b>Geo-fence Status:</b> ${point.geofencing_status ? 'Entrée' : 'Sortie'}
-          `);
+          // Vérification si les coordonnées sont valides avant d'ajouter le marqueur
+          const lat = parseFloat(latitude);
+          const lon = parseFloat(longitude);
+
+          if (!isNaN(lat) && !isNaN(lon)) {
+            const marker = L.marker([lat, lon]).addTo(map);
+            marker.bindPopup(`
+              <b>Device ID:</b> ${point.device_id} <br>
+              <b>Timestamp:</b> ${point.timestamp} <br>
+              <b>Geo-fence Status:</b> ${point.geofencing_status ? 'Entrée' : 'Sortie'}
+            `);
+          } else {
+            console.warn(`Coordonnées invalides pour le point GPS : ${latitude}, ${longitude}`);
+          }
+        } else {
+          console.warn(`Les coordonnées GPS manquent pour le point: ${JSON.stringify(point)}`);
         }
       });
     }
