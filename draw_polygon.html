@@ -13,11 +13,15 @@
     <a href="index.html">Retour à l'accueil</a> | 
     <a href="manage_geofencing.html">Gérer les polygones</a>
   </nav>
+
+  <!-- Formulaire de saisie du nom du polygone -->
   <form id="polygonForm">
     <label for="polygonName">Nom du polygone :</label>
     <input type="text" id="polygonName" name="polygonName" required />
     <button type="submit">Enregistrer le polygone</button>
   </form>
+
+  <!-- Carte -->
   <div id="map" style="height: 600px;"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
