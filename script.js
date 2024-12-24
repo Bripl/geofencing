@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Gestion des polygones pour 'Manage Geofencing Polygons' ---
   if (pageTitle === 'Manage Geofencing Polygons') {
     const polygonsListContainer = document.getElementById('polygons-list');
+    const drawnItems = new L.FeatureGroup().addTo(map);
 
     async function fetchPolygons() {
       try {
@@ -37,18 +38,29 @@ document.addEventListener('DOMContentLoaded', () => {
       polygons.forEach(polygon => {
         const polygonName = polygon.name || 'Polygone sans nom';
 
+        // Créer un item pour chaque polygone
         const polygonItem = document.createElement('div');
         polygonItem.className = 'polygon-item';
 
         polygonItem.innerHTML = `
           <span>Nom: ${polygonName}</span>
-          <button onclick="activatePolygon('${polygon.id}')">Activer</button>
+          <button onclick="activatePolygon('${polygon.id}', ${polygon.active})">${polygon.active ? 'Désactiver' : 'Activer'}</button>
           <button onclick="deletePolygon('${polygon.id}')">Supprimer</button>
         `;
 
+        // Ajouter le polygone sur la carte
         if (polygon.polygon && polygon.polygon.type === 'Polygon') {
-          const geoJsonLayer = L.geoJSON(polygon.polygon).addTo(map);
-          geoJsonLayer.bindPopup(`Nom: ${polygonName}`);
+          const geoJsonLayer = L.geoJSON(polygon.polygon, {
+            onEachFeature: (feature, layer) => {
+              // Ajouter un popup pour chaque polygone
+              layer.bindPopup(`
+                <b>Nom:</b> ${polygonName} <br>
+                <b>Status:</b> ${polygon.active ? 'Actif' : 'Inactif'} <br>
+                <button onclick="activatePolygon('${polygon.id}', ${polygon.active})">${polygon.active ? 'Désactiver' : 'Activer'}</button>
+                <button onclick="deletePolygon('${polygon.id}')">Supprimer</button>
+              `);
+            }
+          }).addTo(map);
         } else {
           console.error(`Données de polygone non valides pour l'ID ${polygon.id}`);
         }
@@ -57,16 +69,18 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    window.activatePolygon = async function (polygonId) {
+    // Fonction pour activer ou désactiver un polygone
+    window.activatePolygon = async function (polygonId, currentStatus) {
+      const newStatus = !currentStatus;  // Inverser le statut (active -> inactive et vice versa)
       try {
         const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/activate-geofencing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: polygonId }),
+          body: JSON.stringify({ id: polygonId, active: newStatus }),
         });
 
         if (response.ok) {
-          alert('Polygone activé avec succès.');
+          alert(newStatus ? 'Polygone activé avec succès.' : 'Polygone désactivé avec succès.');
           fetchPolygons();
         } else {
           console.error('Erreur lors de l\'activation du polygone');
@@ -76,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
+    // Fonction pour supprimer un polygone
     window.deletePolygon = async function (polygonId) {
       try {
         const response = await fetch(`https://geofencing-8a9755fd6a46.herokuapp.com/API/delete-geofencing/${polygonId}`, {
@@ -95,6 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchPolygons();
   }
+
+});
+
 
   // --- Gestion des points GPS pour 'Show GPS Points' ---
   if (pageTitle === 'Show GPS Points') {
