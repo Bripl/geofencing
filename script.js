@@ -126,10 +126,12 @@ function invertCoordinates(geoJSON) {
 async function savePolygon(layer, polygonName) {
   try {
     const geojson = layer.toGeoJSON();
+    
+    // Vérification supplémentaire ici : Inverser les coordonnées [latitude, longitude] -> [longitude, latitude]
     const invertedGeojson = invertCoordinates(geojson);
+
     invertedGeojson.properties = { name: polygonName };
     
-    // Supprimez le niveau "Feature" ici, en envoyant directement la géométrie
     const geoJSONData = {
       name: polygonName,
       geometry: invertedGeojson.geometry, // Directement la géométrie sans le type "Feature"
@@ -140,7 +142,7 @@ async function savePolygon(layer, polygonName) {
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geoJSONData), // Modification ici
+      body: JSON.stringify(geoJSONData),
     });
 
     if (!response.ok) throw new Error(await response.text());
@@ -151,6 +153,7 @@ async function savePolygon(layer, polygonName) {
     alert('Erreur lors de l\'enregistrement du polygone.');
   }
 }
+
 
 async function updatePolygon(polygonId, layer, polygonName) {
   try {
