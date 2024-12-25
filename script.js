@@ -21,9 +21,25 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
+  // Fonction pour obtenir les paramètres URL
+  function getUrlParams() {
+    const params = {};
+    const queryString = window.location.search.slice(1);
+    const regex = /([^&=]+)=([^&]*)/g;
+    let m;
+    while ((m = regex.exec(queryString)) !== null) {
+      params[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
+    }
+    return params;
+  }
+
   // Afficher les points GPS sur la carte
   if (document.getElementById('gps-map')) {
-    const map = L.map('gps-map').setView([48.8566, 2.3522], 13); // Centré sur Paris
+    const params = getUrlParams();
+    const latitude = params.lat ? parseFloat(params.lat) : 48.8566;
+    const longitude = params.lng ? parseFloat(params.lng) : 2.3522;
+    const zoom = params.zoom ? parseInt(params.zoom) : 13;
+    const map = L.map('gps-map').setView([latitude, longitude], zoom);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
@@ -102,6 +118,14 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Veuillez tracer un polygone et entrer un nom.');
       }
     });
+
+    document.getElementById('show-gps-button').addEventListener('click', (e) => {
+      e.preventDefault();
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      const url = `show_gps_points.html?lat=${center.lat}&lng=${center.lng}&zoom=${zoom}`;
+      window.location.href = url;
+    });
   }
 
   // Afficher et gérer les polygones de geofencing
@@ -139,7 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
                 .then(response => {
                   alert(`Polygone ${newValue ? 'activé' : 'désactivé'} avec succès!`);
-                  location.reload(); // Recharger la page pour mettre à jour la couleur
+                  // Recharger la carte sans changer le centrage ni le zoom
+                  map.setView(layer.getBounds().getCenter(), map.getZoom());
+                  layer.setStyle({ color: newValue ? 'red' : 'blue' });
                 })
                 .catch(error => {
                   console.error('Erreur lors de la mise à jour du booléen:', error);
@@ -150,7 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/delete-geofencing', 'POST', { name: polygon.name })
                 .then(response => {
                   alert('Polygone supprimé avec succès!');
-                  location.reload(); // Recharger la page pour mettre à jour la carte
+                  // Supprimer le polygone de la carte sans changer le centrage ni le zoom
+                  map.removeLayer(layer);
                 })
                 .catch(error => {
                   console.error('Erreur lors de la suppression du polygone:', error);
@@ -163,6 +190,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }).catch(error => {
       console.error('Erreur lors de la récupération des données de geofencing:', error);
+    });
+
+    document.getElementById('show-gps-button').addEventListener('click', (e) => {
+      e.preventDefault();
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      const url = `show_gps_points.html?lat=${center.lat}&lng=${center.lng}&zoom=${zoom}`;
+      window.location.href = url;
     });
   }
 });
