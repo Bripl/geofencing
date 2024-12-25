@@ -128,12 +128,19 @@ async function savePolygon(layer, polygonName) {
     const geojson = layer.toGeoJSON();
     const invertedGeojson = invertCoordinates(geojson);
     invertedGeojson.properties = { name: polygonName };
-    console.log('GeoJSON à envoyer :', JSON.stringify(geometry, null, 2));
+    
+    // Supprimez le niveau "Feature" ici, en envoyant directement la géométrie
+    const geoJSONData = {
+      name: polygonName,
+      geometry: invertedGeojson.geometry, // Directement la géométrie sans le type "Feature"
+    };
+
+    console.log('GeoJSON à envoyer :', JSON.stringify(geoJSONData, null, 2));
 
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: polygonName, geometry: invertedGeojson }),
+      body: JSON.stringify(geoJSONData), // Modification ici
     });
 
     if (!response.ok) throw new Error(await response.text());
@@ -150,12 +157,19 @@ async function updatePolygon(polygonId, layer, polygonName) {
     const geojson = layer.toGeoJSON();
     const invertedGeojson = invertCoordinates(geojson);
     invertedGeojson.properties = { name: polygonName };
-    console.log('GeoJSON à envoyer :', JSON.stringify(invertedGeojson, null, 2));
+    
+    // Supprimez le niveau "Feature" ici également
+    const geoJSONData = {
+      name: polygonName,
+      geometry: invertedGeojson.geometry, // Directement la géométrie sans le type "Feature"
+    };
+
+    console.log('GeoJSON à envoyer :', JSON.stringify(geoJSONData, null, 2));
 
     const response = await fetch(`https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing/${polygonId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: polygonName, geometry: invertedGeojson }),
+      body: JSON.stringify(geoJSONData), // Modification ici
     });
 
     if (!response.ok) throw new Error(await response.text());
@@ -166,6 +180,7 @@ async function updatePolygon(polygonId, layer, polygonName) {
     alert('Erreur lors de la mise à jour du polygone.');
   }
 }
+
 
 async function deletePolygon(polygonId) {
   try {
