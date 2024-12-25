@@ -16,15 +16,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Fonction pour initialiser la carte et le contrôle de dessin
 function initializeMapAndDraw() {
-  console.log('Calling initializeMap');
   const map = initializeMap();
-  console.log('Calling initializeDrawControl');
   const drawnItems = initializeDrawControl(map);
-  console.log('Calling fetchPolygons');
+  console.log('Fetching polygons');
   fetchPolygons(map);
-  console.log('Setting up draw events');
   handleDrawEvents(map, drawnItems);
-  console.log('Setting up edit events');
   handleEditEvents(map, drawnItems);
 }
 
@@ -34,7 +30,6 @@ function initializeMap() {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(map);
-  console.log('Map initialized');
   return map;
 }
 
@@ -48,7 +43,6 @@ function initializeDrawControl(map) {
     edit: { featureGroup: drawnItems },
   });
   map.addControl(drawControl);
-  console.log('Draw control initialized');
 
   return drawnItems;
 }
@@ -111,7 +105,7 @@ async function fetchPolygons(map) {
 }
 
 function addPolygonToMap(map, poly) {
-  const latlngs = poly.Polygon.coordinates[0].map((coord) => [coord[1], coord[0]]); // Conversion [lon, lat] -> [lat, lon]
+  const latlngs = poly.geometry.coordinates[0].map((coord) => [coord[1], coord[0]]); // Conversion [lon, lat] -> [lat, lon]
   const layer = L.polygon(latlngs, { color: 'blue' })
     .addTo(map)
     .bindPopup(poly.name || 'Polygone sans nom');
@@ -119,19 +113,27 @@ function addPolygonToMap(map, poly) {
   console.log(`Polygon added: ${poly.name}`);
 }
 
+function invertCoordinates(geoJSON) {
+  const geometry = geoJSON.geometry;
+  if (geometry.type === "Polygon") {
+    geometry.coordinates = geometry.coordinates.map(ring =>
+      ring.map(([lat, lon]) => [lon, lat]) // Inversion latitude ↔ longitude
+    );
+  }
+  return geoJSON;
+}
+
 async function savePolygon(layer, polygonName) {
   try {
     const geojson = layer.toGeoJSON();
-    geojson.geometry.coordinates = geojson.geometry.coordinates.map((ring) =>
-      ring.map((coord) => [coord[1], coord[0]]) // Inverser [lat, lon] -> [lon, lat]
-    );
-    geojson.properties = { name: polygonName };
-    console.log('GeoJSON à envoyer :', JSON.stringify(geojson, null, 2));
+    const invertedGeojson = invertCoordinates(geojson);
+    invertedGeojson.properties = { name: polygonName };
+    console.log('GeoJSON à envoyer :', JSON.stringify(invertedGeojson, null, 2));
 
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: polygonName, Polygon: geojson }),
+      body: JSON.stringify({ name: polygonName, geometry: invertedGeojson }),
     });
 
     if (!response.ok) throw new Error(await response.text());
@@ -146,16 +148,14 @@ async function savePolygon(layer, polygonName) {
 async function updatePolygon(polygonId, layer, polygonName) {
   try {
     const geojson = layer.toGeoJSON();
-    geojson.geometry.coordinates = geojson.geometry.coordinates.map((ring) =>
-      ring.map((coord) => [coord[1], coord[0]]) // Inverser [lat, lon] -> [lon, lat]
-    );
-    geojson.properties = { name: polygonName };
-    console.log('GeoJSON à envoyer :', JSON.stringify(geojson, null, 2));
+    const invertedGeojson = invertCoordinates(geojson);
+    invertedGeojson.properties = { name: polygonName };
+    console.log('GeoJSON à envoyer :', JSON.stringify(invertedGeojson, null, 2));
 
     const response = await fetch(`https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing/${polygonId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: polygonName, Polygon: geojson }),
+      body: JSON.stringify({ name: polygonName, geometry: invertedGeojson }),
     });
 
     if (!response.ok) throw new Error(await response.text());
@@ -223,7 +223,6 @@ async function fetchPolygonsList() {
     });
     console.log('Polygons list fetched and displayed');
   } catch (error) {
-	      console.error('Erreur lors de la récupération de la liste des polygones :', error);
-    alert('Erreur lors de la récupération de la liste des polygones.');
+    console.error('Erreur lors de la récupération des polygones :', error);
   }
 }
