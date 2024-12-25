@@ -126,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div>
                 <h3>${polygon.name}</h3>
                 <button id="toggle-active">${polygon.active ? 'Désactiver' : 'Activer'}</button>
+                <button id="delete-polygon">🗑️</button>
               </div>
             `;
 
@@ -142,6 +143,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .catch(error => {
                   console.error('Erreur lors de la mise à jour du booléen:', error);
+                });
+            });
+
+            document.getElementById('delete-polygon').addEventListener('click', () => {
+              fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/delete-geofencing', 'POST', { name: polygon.name })
+                .then(response => {
+                  alert('Polygone supprimé avec succès!');
+                  location.reload(); // Recharger la page pour mettre à jour la carte
+                })
+                .catch(error => {
+                  console.error('Erreur lors de la suppression du polygone:', error);
                 });
             });
           });
