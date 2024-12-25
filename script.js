@@ -128,7 +128,7 @@ async function savePolygon(layer, polygonName) {
     const geojson = layer.toGeoJSON();
     const invertedGeojson = invertCoordinates(geojson);
     invertedGeojson.properties = { name: polygonName };
-    console.log('GeoJSON à envoyer :', JSON.stringify(invertedGeojson, null, 2));
+    console.log('GeoJSON à envoyer :', JSON.stringify(geometry, null, 2));
 
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
       method: 'POST',
