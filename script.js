@@ -115,16 +115,35 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing-data').then(response => {
       if (response && Array.isArray(response.data)) {
         response.data.forEach(polygon => {
-          const layer = L.geoJSON(polygon.geometry).addTo(map);
+          const color = polygon.active ? 'red' : 'blue';
+          const layer = L.geoJSON(polygon.geometry, {
+            style: { color: color }
+          }).addTo(map);
+
           layer.on('click', () => {
             const newValue = !polygon.active; // Inverser la valeur du booléen
-            fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
-              .then(response => {
-                alert('Booléen mis à jour avec succès!');
-              })
-              .catch(error => {
-                console.error('Erreur lors de la mise à jour du booléen:', error);
-              });
+            const popupContent = `
+              <div>
+                <h3>${polygon.name}</h3>
+                <button id="toggle-active">${polygon.active ? 'Désactiver' : 'Activer'}</button>
+              </div>
+            `;
+
+            const popup = L.popup()
+              .setLatLng(layer.getBounds().getCenter())
+              .setContent(popupContent)
+              .openOn(map);
+
+            document.getElementById('toggle-active').addEventListener('click', () => {
+              fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
+                .then(response => {
+                  alert(`Polygone ${newValue ? 'activé' : 'désactivé'} avec succès!`);
+                  location.reload(); // Recharger la page pour mettre à jour la couleur
+                })
+                .catch(error => {
+                  console.error('Erreur lors de la mise à jour du booléen:', error);
+                });
+            });
           });
         });
       } else {
