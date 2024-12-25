@@ -222,4 +222,8 @@ async function fetchPolygonsList() {
       polygonsList.appendChild(polygonItem);
     });
     console.log('Polygons list fetched and displayed');
-  } catch (error
+  } catch (error) {
+	      console.error('Erreur lors de la récupération de la liste des polygones :', error);
+    alert('Erreur lors de la récupération de la liste des polygones.');
+  }
+}
