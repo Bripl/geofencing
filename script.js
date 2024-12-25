@@ -45,17 +45,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Convertir le polygone en GeoJSON
-    const geojson = layer.toGeoJSON();
-    geojson.properties = { name: polygonName };
+   // Convertir le polygone en GeoJSON
+const geojson = layer.toGeoJSON();
+geojson.properties = { name: polygonName }; // Ajout de la propriété "name"
 
-    console.log("GeoJSON généré pour le polygone :", geojson);
+console.log("GeoJSON généré pour le polygone :", geojson);
 
-    // Assurez-vous que le GeoJSON est un objet valide de type "Feature"
-    if (geojson.type !== 'Feature' || geojson.geometry.type !== 'polygon') {
-      alert("Le format du GeoJSON est incorrect.");
-      return;
-    }
+// Assurez-vous que le GeoJSON est un objet valide de type "Feature"
+if (geojson.type !== 'Feature' || geojson.geometry.type !== 'Polygon') {
+  alert("Le format du GeoJSON est incorrect.");
+  return;
+}
+
 
     // Préparer la requête pour enregistrer le polygone
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
