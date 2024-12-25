@@ -13,7 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
       throw new Error(`Erreur HTTP! Statut: ${response.status}`);
     }
 
-    return response.json();
+    // Vérifie s'il y a un contenu JSON à parser
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return response.json();
+    }
+    return null;
   }
 
   // Afficher les points GPS sur la carte
@@ -84,7 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
           .then(response => {
-            alert('Polygone enregistré avec succès!');
+            if (response) {
+              alert('Polygone enregistré avec succès!');
+            } else {
+              alert('Insertion réussie sans retour de données.');
+            }
           })
           .catch(error => {
             console.error('Erreur lors de l\'enregistrement du polygone:', error);
