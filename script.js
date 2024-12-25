@@ -59,20 +59,29 @@ async function fetchPolygons(map) {
 
 // Ajouter un polygone à la carte
 function addPolygonToMap(map, poly) {
-  const latlngs = poly.polygon.coordinates[0].map((coord) => [coord[1], coord[0]]);
+  const latlngs = poly.Polygon.coordinates[0].map((coord) => [coord[1], coord[0]]); // Conversion [lon, lat] -> [lat, lon]
   L.polygon(latlngs, { color: 'blue' }).addTo(map).bindPopup(poly.name || 'Polygone sans nom');
 }
 
 // Enregistrer un polygone dans le backend
 async function savePolygon(layer, polygonName) {
   try {
+    // Obtenir le GeoJSON du polygone dessiné
     const geojson = layer.toGeoJSON();
+
+    // Conversion des coordonnées au format [lon, lat] attendu par le backend
+    geojson.geometry.coordinates = geojson.geometry.coordinates.map((ring) =>
+      ring.map((coord) => [coord[1], coord[0]]) // Inverser [lat, lon] -> [lon, lat]
+    );
+
+    // Ajout des propriétés nécessaires
     geojson.properties = { name: polygonName };
 
+    // Requête au backend
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: polygonName, polygon: geojson }),
+      body: JSON.stringify({ name: polygonName, Polygon: geojson }),
     });
 
     if (!response.ok) throw new Error(await response.text());
