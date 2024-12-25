@@ -77,6 +77,9 @@ async function savePolygon(layer, polygonName) {
     // Ajout des propriétés nécessaires
     geojson.properties = { name: polygonName };
 
+    // Debug : afficher le GeoJSON pour vérifier sa structure
+    console.log('GeoJSON à envoyer :', JSON.stringify(geojson, null, 2));
+
     // Requête au backend
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
       method: 'POST',
@@ -91,3 +94,4 @@ async function savePolygon(layer, polygonName) {
     alert('Erreur lors de l\'enregistrement du polygone.');
   }
 }
+
