@@ -29,7 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/gps-data').then(data => {
+    fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/gps-data').then(response => {
+      const data = response.data;
       if (Array.isArray(data)) {
         data.forEach(point => {
           L.marker([point.latitude, point.longitude])
@@ -112,7 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing-data').then(data => {
+    fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing-data').then(response => {
+      const data = response.data;
       if (Array.isArray(data)) {
         data.forEach(polygon => {
           const layer = L.geoJSON(polygon.geometry).addTo(map);
