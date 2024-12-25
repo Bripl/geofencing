@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       body: body ? JSON.stringify(body) : null,
     });
+
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP! Statut: ${response.status}`);
+    }
+
     return response.json();
   }
 
@@ -20,18 +25,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }).addTo(map);
 
     fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/gps-data').then(data => {
-      data.forEach(point => {
-        L.marker([point.latitude, point.longitude])
-          .addTo(map)
-          .bindPopup(`Device ID: ${point.device_id}<br>Timestamp: ${point.timestamp}`)
-          .openPopup();
-      });
+      if (Array.isArray(data)) {
+        data.forEach(point => {
+          L.marker([point.latitude, point.longitude])
+            .addTo(map)
+            .bindPopup(`Device ID: ${point.device_id}<br>Timestamp: ${point.timestamp}`)
+            .openPopup();
+        });
+      } else {
+        console.error('Les données GPS ne sont pas au bon format:', data);
+      }
     }).catch(error => {
       console.error('Erreur lors de la récupération des données GPS:', error);
     });
   }
 
   // Tracer des polygones pour le geofencing
+  let drawnPolygon = null;
+
   if (document.getElementById('geofencing-map')) {
     const map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
 
@@ -46,25 +57,41 @@ document.addEventListener('DOMContentLoaded', () => {
       edit: {
         featureGroup: drawnItems,
       },
+      draw: {
+        polygon: true,
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+      },
     });
     map.addControl(drawControl);
 
     map.on(L.Draw.Event.CREATED, function (event) {
-      const layer = event.layer;
-      drawnItems.addLayer(layer);
+      drawnItems.clearLayers(); // Effacer les polygones précédents
+      drawnPolygon = event.layer;
+      drawnItems.addLayer(drawnPolygon);
+    });
 
-      const polygonData = {
-        name: 'Geofencing Polygon',
-        geometry: layer.toGeoJSON().geometry,
-      };
+    document.getElementById('save-polygon').addEventListener('click', () => {
+      const polygonName = document.getElementById('polygon-name').value;
 
-      fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
-        .then(response => {
-          alert('Polygone enregistré avec succès!');
-        })
-        .catch(error => {
-          console.error('Erreur lors de l\'enregistrement du polygone:', error);
-        });
+      if (drawnPolygon && polygonName) {
+        const polygonData = {
+          name: polygonName,
+          geometry: drawnPolygon.toGeoJSON().geometry,
+        };
+
+        fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
+          .then(response => {
+            alert('Polygone enregistré avec succès!');
+          })
+          .catch(error => {
+            console.error('Erreur lors de l\'enregistrement du polygone:', error);
+          });
+      } else {
+        alert('Veuillez tracer un polygone et entrer un nom.');
+      }
     });
   }
 
@@ -77,19 +104,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }).addTo(map);
 
     fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing-data').then(data => {
-      data.forEach(polygon => {
-        const layer = L.geoJSON(polygon.geometry).addTo(map);
-        layer.on('click', () => {
-          const newValue = !polygon.active; // Inverser la valeur du booléen
-          fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
-            .then(response => {
-              alert('Booléen mis à jour avec succès!');
-            })
-            .catch(error => {
-              console.error('Erreur lors de la mise à jour du booléen:', error);
-            });
+      if (Array.isArray(data)) {
+        data.forEach(polygon => {
+          const layer = L.geoJSON(polygon.geometry).addTo(map);
+          layer.on('click', () => {
+            const newValue = !polygon.active; // Inverser la valeur du booléen
+            fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
+              .then(response => {
+                alert('Booléen mis à jour avec succès!');
+              })
+              .catch(error => {
+                console.error('Erreur lors de la mise à jour du booléen:', error);
+              });
+          });
         });
-      });
+      } else {
+        console.error('Les données de geofencing ne sont pas au bon format:', data);
+      }
     }).catch(error => {
       console.error('Erreur lors de la récupération des données de geofencing:', error);
     });
