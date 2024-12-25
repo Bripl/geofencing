@@ -45,13 +45,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    // Convertir le polygone en GeoJSON
     const geojson = layer.toGeoJSON();
-    console.log('GeoJSON généré pour le polygone :', geojson);
+    geojson.properties = { name: polygonName };
 
+    console.log("GeoJSON généré pour le polygone :", geojson);
+
+    // Assurez-vous que le GeoJSON est un objet valide de type "Feature"
+    if (geojson.type !== 'Feature' || geojson.geometry.type !== 'polygon') {
+      alert("Le format du GeoJSON est incorrect.");
+      return;
+    }
+
+    // Préparer la requête pour enregistrer le polygone
     const response = await fetch('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: polygonName, polygon: geojson }),
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: polygonName,
+        polygon: geojson  // Envoi du GeoJSON avec le nom du polygone
+      })
     });
 
     if (!response.ok) {
@@ -61,10 +76,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     alert('Polygone enregistré avec succès');
   } catch (error) {
-    console.error("Erreur lors de l'enregistrement du polygone:", error);
+    console.error("Erreur lors de l'enregistrement du polygone :", error);
     alert("Erreur lors de l'enregistrement du polygone.");
   }
 }
+
 
   // Gestion des événements de dessin
   map.on('draw:created', (event) => {
