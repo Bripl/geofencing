@@ -1,24 +1,4 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const map = initializeMap();
-  const drawnItems = initializeDrawControl(map);
-  await fetchPolygons(map);
-  handleDrawEvents(map, drawnItems);
-  handleEditEvents(map, drawnItems);
-});
-
-// Fonction pour initialiser la carte
-function initializeMap() {
-  const map = L.map('map').setView([48.8566, 2.3522], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-  }).addTo(map);
-  return map;
-}
-
-// Fonction pour initialiser le contrôle de dessin
-function initializeDrawControl(map) {
-  const drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);document.addEventListener('DOMContentLoaded', async () => {
   if (document.getElementById('map')) {
     initializeMapAndDraw();
   }
