@@ -30,16 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }).addTo(map);
 
     fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/gps-data').then(response => {
-      const data = response.data;
-      if (Array.isArray(data)) {
-        data.forEach(point => {
+      if (response && Array.isArray(response.data)) {
+        response.data.forEach(point => {
           L.marker([point.latitude, point.longitude])
             .addTo(map)
             .bindPopup(`Device ID: ${point.device_id}<br>Timestamp: ${point.timestamp}`)
             .openPopup();
         });
       } else {
-        console.error('Les données GPS ne sont pas au bon format:', data);
+        console.error('Les données GPS ne sont pas au bon format:', response);
       }
     }).catch(error => {
       console.error('Erreur lors de la récupération des données GPS:', error);
@@ -114,9 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }).addTo(map);
 
     fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing-data').then(response => {
-      const data = response.data;
-      if (Array.isArray(data)) {
-        data.forEach(polygon => {
+      if (response && Array.isArray(response.data)) {
+        response.data.forEach(polygon => {
           const layer = L.geoJSON(polygon.geometry).addTo(map);
           layer.on('click', () => {
             const newValue = !polygon.active; // Inverser la valeur du booléen
@@ -130,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         });
       } else {
-        console.error('Les données de geofencing ne sont pas au bon format:', data);
+        console.error('Les données de geofencing ne sont pas au bon format:', response);
       }
     }).catch(error => {
       console.error('Erreur lors de la récupération des données de geofencing:', error);
