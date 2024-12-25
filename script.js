@@ -163,9 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
                 .then(response => {
                   alert(`Polygone ${newValue ? 'activé' : 'désactivé'} avec succès!`);
+                  layer.setStyle({ color: newValue ? 'red' : 'blue' });
                   // Recharger la carte sans changer le centrage ni le zoom
                   map.setView(layer.getBounds().getCenter(), map.getZoom());
-                  layer.setStyle({ color: newValue ? 'red' : 'blue' });
                 })
                 .catch(error => {
                   console.error('Erreur lors de la mise à jour du booléen:', error);
