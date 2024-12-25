@@ -19,13 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    fetchData('/API/gps-data').then(data => {
+    fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/gps-data').then(data => {
       data.forEach(point => {
         L.marker([point.latitude, point.longitude])
           .addTo(map)
           .bindPopup(`Device ID: ${point.device_id}<br>Timestamp: ${point.timestamp}`)
           .openPopup();
       });
+    }).catch(error => {
+      console.error('Erreur lors de la récupération des données GPS:', error);
     });
   }
 
@@ -56,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         geometry: layer.toGeoJSON().geometry,
       };
 
-      fetchData('/API/save-geofencing', 'POST', polygonData)
+      fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
         .then(response => {
           alert('Polygone enregistré avec succès!');
         })
@@ -74,12 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    fetchData('/API/geofencing-data').then(data => {
+    fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing-data').then(data => {
       data.forEach(polygon => {
         const layer = L.geoJSON(polygon.geometry).addTo(map);
         layer.on('click', () => {
-          const newValue = !polygon.bool; // Inverser la valeur du booléen
-          fetchData('/API/update-geofencing', 'POST', { id: polygon.id, newValue })
+          const newValue = !polygon.active; // Inverser la valeur du booléen
+          fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
             .then(response => {
               alert('Booléen mis à jour avec succès!');
             })
@@ -88,6 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
       });
+    }).catch(error => {
+      console.error('Erreur lors de la récupération des données de geofencing:', error);
     });
   }
 });
