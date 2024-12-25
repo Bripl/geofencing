@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Afficher les points GPS</title>
+  <title>Tracer des polygones</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
 </head>
 <body>
-  <h1>Afficher les points GPS</h1>
+  <h1>Tracer des polygones</h1>
   <nav>
     <a href="index.html">Retour à l'accueil</a> | 
-    <a href="draw_geofencing.html">Tracer des polygones</a> | 
     <a href="manage_geofencing.html">Gérer les polygones</a>
   </nav>
 
   <!-- Carte -->
-  <div id="gps-map" style="height: 600px;"></div>
+  <div id="geofencing-map" style="height: 600px;"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

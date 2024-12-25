@@ -5,35 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gérer les polygones</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-    }
-    #map {
-      height: 600px;
-      margin-bottom: 20px;
-    }
-    #polygons-list {
-      margin: 20px 0;
-    }
-    .polygon-item {
-      margin-bottom: 10px;
-    }
-    .polygon-item button {
-      margin-left: 10px;
-    }
-  </style>
 </head>
 <body>
   <h1>Gérer les polygones</h1>
   <nav>
     <a href="index.html">Retour à l'accueil</a> | 
-    <a href="draw_polygon.html">Tracer un polygone</a>
+    <a href="draw_geofencing.html">Tracer des polygones</a>
   </nav>
-  <div id="map" style="height: 600px;"></div>
-  <div id="polygons-list">
-    <p>Chargement des polygones...</p>
-  </div>
+
+  <!-- Carte -->
+  <div id="manage-geofencing-map" style="height: 600px;"></div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="script.js"></script>
 </body>
