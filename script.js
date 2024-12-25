@@ -159,30 +159,51 @@ document.addEventListener('DOMContentLoaded', () => {
               .setContent(popupContent)
               .openOn(map);
 
-            document.getElementById('toggle-active').addEventListener('click', () => {
+            // Mettre à jour les éléments du popup
+            function updatePopup() {
+              const newContent = `
+                <div>
+                  <h3>${polygon.name}</h3>
+                  <button id="toggle-active">${newValue ? 'Désactiver' : 'Activer'}</button>
+                  <button id="delete-polygon">🗑️</button>
+                </div>
+              `;
+              popup.setContent(newContent).setLatLng(layer.getBounds().getCenter()).openOn(map);
+
+              document.getElementById('toggle-active').addEventListener('click', toggleActive);
+              document.getElementById('delete-polygon').addEventListener('click', deletePolygon);
+            }
+
+            // Fonction pour changer le booléen 'active'
+            function toggleActive() {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
                 .then(response => {
                   alert(`Polygone ${newValue ? 'activé' : 'désactivé'} avec succès!`);
+                  polygon.active = newValue;
                   layer.setStyle({ color: newValue ? 'red' : 'blue' });
-                  // Recharger la carte sans changer le centrage ni le zoom
-                  map.setView(layer.getBounds().getCenter(), map.getZoom());
+                  updatePopup(); // Rafraîchir le popup
                 })
                 .catch(error => {
                   console.error('Erreur lors de la mise à jour du booléen:', error);
                 });
-            });
+            }
 
-            document.getElementById('delete-polygon').addEventListener('click', () => {
+            // Fonction pour supprimer le polygone
+            function deletePolygon() {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/delete-geofencing', 'POST', { name: polygon.name })
                 .then(response => {
                   alert('Polygone supprimé avec succès!');
-                  // Supprimer le polygone de la carte sans changer le centrage ni le zoom
                   map.removeLayer(layer);
+                  map.closePopup(); // Fermer le popup
                 })
                 .catch(error => {
                   console.error('Erreur lors de la suppression du polygone:', error);
                 });
-            });
+            }
+
+            // Attacher les événements aux boutons du popup
+            document.getElementById('toggle-active').addEventListener('click', toggleActive);
+            document.getElementById('delete-polygon').addEventListener('click', deletePolygon);
           });
         });
       } else {
