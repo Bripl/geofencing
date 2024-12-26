@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
               document.getElementById('delete-polygon').addEventListener('click', deletePolygon);
             }
 
-            // Fonction pour changer le booléen 'active'
+                        // Fonction pour changer le booléen 'active'
             function toggleActive() {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
                 .then(response => {
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-                       // Fonction pour supprimer le polygone
+            // Fonction pour supprimer le polygone
             function deletePolygon() {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/delete-geofencing', 'POST', { name: polygon.name })
                 .then(response => {
