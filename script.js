@@ -186,6 +186,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function toggleActive() {
+              const newValue = !polygon.active;
+              console.log('Toggle Active:', { name: polygon.name, newValue });  // Ajout de log
+
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
                 .then(response => {
                   alert(`Polygone ${newValue ? 'activé' : 'désactivé'} avec succès!`);
@@ -197,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   console.error('Erreur lors de la mise à jour du booléen:', error);
                 });
             }
+
 
             function deletePolygon() {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/delete-geofencing', 'POST', { name: polygon.name })
