@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
       throw new Error(`Erreur HTTP! Statut: ${response.status}`);
     }
 
-    // Vérifie s'il y a un contenu JSON à parser
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       return response.json();
@@ -21,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
-  // Fonction pour obtenir les paramètres URL
   function getUrlParams() {
     const params = {};
     const queryString = window.location.search.slice(1);
@@ -33,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return params;
   }
 
-  // Afficher les points GPS sur la carte
   if (document.getElementById('gps-map')) {
     const params = getUrlParams();
     const latitude = params.lat ? parseFloat(params.lat) : 48.8566;
@@ -61,13 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Erreur lors de la récupération des données GPS:', error);
     });
 
-    // Afficher les polygones de géofencing actifs en rouge
     fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing-data').then(response => {
       if (response && Array.isArray(response.data)) {
         response.data.forEach(polygon => {
           if (polygon.active) {
             const latlngs = polygon.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
-            L.polygon(latlngs, { color: 'red' }).addTo(map);  // Polygones actifs en rouge
+            L.polygon(latlngs, { color: 'red' }).addTo(map);
           }
         });
       } else {
@@ -78,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Tracer des polygones pour le geofencing
   let drawnPolygon = null;
 
   if (document.getElementById('geofencing-map')) {
@@ -106,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     map.addControl(drawControl);
 
     map.on(L.Draw.Event.CREATED, function (event) {
-      drawnItems.clearLayers(); // Effacer les polygones précédents
+      drawnItems.clearLayers();
       drawnPolygon = event.layer;
       drawnItems.addLayer(drawnPolygon);
     });
@@ -118,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const polygonData = {
           name: polygonName,
           geometry: drawnPolygon.toGeoJSON().geometry,
+          active: false  // Polygones créés par défaut comme inactifs
         };
 
         fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
@@ -145,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Afficher et gérer les polygones de geofencing
   if (document.getElementById('manage-geofencing-map')) {
     const map = L.map('manage-geofencing-map').setView([48.8566, 2.3522], 13);
 
@@ -162,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }).addTo(map);
 
           layer.on('click', () => {
-            const newValue = !polygon.active; // Inverser la valeur du booléen
+            const newValue = !polygon.active;
             const popupContent = `
               <div>
                 <h3>${polygon.name}</h3>
@@ -176,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
               .setContent(popupContent)
               .openOn(map);
 
-            // Mettre à jour les éléments du popup
             function updatePopup() {
               const newContent = `
                 <div>
@@ -191,34 +185,31 @@ document.addEventListener('DOMContentLoaded', () => {
               document.getElementById('delete-polygon').addEventListener('click', deletePolygon);
             }
 
-                        // Fonction pour changer le booléen 'active'
             function toggleActive() {
-              fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
+              fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, active: newValue })
                 .then(response => {
                   alert(`Polygone ${newValue ? 'activé' : 'désactivé'} avec succès!`);
                   polygon.active = newValue;
                   layer.setStyle({ color: newValue ? 'red' : 'blue' });
-                  updatePopup(); // Rafraîchir le popup
+                  updatePopup();
                 })
                 .catch(error => {
                   console.error('Erreur lors de la mise à jour du booléen:', error);
                 });
             }
 
-            // Fonction pour supprimer le polygone
             function deletePolygon() {
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/delete-geofencing', 'POST', { name: polygon.name })
                 .then(response => {
                   alert('Polygone supprimé avec succès!');
                   map.removeLayer(layer);
-                  map.closePopup(); // Fermer le popup
+                  map.closePopup();
                 })
                 .catch(error => {
                   console.error('Erreur lors de la suppression du polygone:', error);
                 });
             }
 
-            // Attacher les événements aux boutons du popup
             document.getElementById('toggle-active').addEventListener('click', toggleActive);
             document.getElementById('delete-polygon').addEventListener('click', deletePolygon);
           });
