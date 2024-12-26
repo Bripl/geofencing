@@ -48,7 +48,16 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/gps-data').then(response => {
       if (response && Array.isArray(response.data)) {
         response.data.forEach(point => {
-          var marker = L.marker([point.latitude, point.longitude]).addTo(map);
+          // Crée des icônes rouges pour les points GPS
+          var redIcon = L.icon({
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.4/images/marker-icon.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          });
+
+          var marker = L.marker([point.latitude, point.longitude], { icon: redIcon }).addTo(map);
           marker.bindPopup(`Device ID: ${point.device_id}<br>Timestamp: ${point.timestamp}<br>Geo-fence: ${point.geo_fence_status ? 'Dedans' : 'Dehors'}`);
           marker.on('click', function(e) {
             marker.openPopup();
