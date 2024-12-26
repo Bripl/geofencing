@@ -77,69 +77,69 @@ document.addEventListener('DOMContentLoaded', () => {
   let drawnPolygon = null;
 
   if (document.getElementById('geofencing-map')) {
-    const map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
+  const map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+  }).addTo(map);
 
-    const drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
+  const drawnItems = new L.FeatureGroup();
+  map.addLayer(drawnItems);
 
-    const drawControl = new L.Control.Draw({
-      edit: {
-        featureGroup: drawnItems,
-      },
-      draw: {
-        polygon: true,
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        marker: false,
-      },
-    });
-    map.addControl(drawControl);
+  const drawControl = new L.Control.Draw({
+    edit: {
+      featureGroup: drawnItems,
+    },
+    draw: {
+      polygon: true,
+      polyline: false,
+      rectangle: false,
+      circle: false,
+      marker: false,
+    },
+  });
+  map.addControl(drawControl);
 
-    map.on(L.Draw.Event.CREATED, function (event) {
-      drawnItems.clearLayers();
-      drawnPolygon = event.layer;
-      drawnItems.addLayer(drawnPolygon);
-    });
+  map.on(L.Draw.Event.CREATED, function (event) {
+    drawnItems.clearLayers();
+    drawnPolygon = event.layer;
+    drawnItems.addLayer(drawnPolygon);
+  });
 
-    document.getElementById('save-polygon').addEventListener('click', () => {
-      const polygonName = document.getElementById('polygon-name').value;
+  document.getElementById('save-polygon').addEventListener('click', () => {
+    const polygonName = document.getElementById('polygon-name').value;
 
-      if (drawnPolygon && polygonName) {
-        const polygonData = {
-          name: polygonName,
-          geometry: drawnPolygon.toGeoJSON().geometry,
-          active: false
-        };
+    if (drawnPolygon && polygonName) {
+      const polygonData = {
+        name: polygonName,
+        geometry: drawnPolygon.toGeoJSON().geometry,
+        active: false // Définir par défaut comme inactif
+      };
 
-        fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
-          .then(response => {
-            if (response) {
-              alert('Polygone enregistré avec succès!');
-            } else {
-              alert('Insertion réussie sans retour de données.');
-            }
-          })
-          .catch(error => {
-            console.error('Erreur lors de l\'enregistrement du polygone:', error);
-          });
-      } else {
-        alert('Veuillez tracer un polygone et entrer un nom.');
-      }
-    });
+      fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
+        .then(response => {
+          if (response) {
+            alert('Polygone enregistré avec succès!');
+          } else {
+            alert('Insertion réussie sans retour de données.');
+          }
+        })
+        .catch(error => {
+          console.error('Erreur lors de l\'enregistrement du polygone:', error);
+        });
+    } else {
+      alert('Veuillez tracer un polygone et entrer un nom.');
+    }
+  });
 
-    document.getElementById('show-gps-button').addEventListener('click', (e) => {
-      e.preventDefault();
-      const center = map.getCenter();
-      const zoom = map.getZoom();
-      const url = `show_gps_points.html?lat=${center.lat}&lng=${center.lng}&zoom=${zoom}`;
-      window.location.href = url;
-    });
-  }
+  document.getElementById('show-gps-button').addEventListener('click', (e) => {
+    e.preventDefault();
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    const url = `show_gps_points.html?lat=${center.lat}&lng=${center.lng}&zoom=${zoom}`;
+    window.location.href = url;
+  });
+}
 
   if (document.getElementById('manage-geofencing-map')) {
     const map = L.map('manage-geofencing-map').setView([48.8566, 2.3522], 13);
