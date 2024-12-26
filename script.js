@@ -48,16 +48,33 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/gps-data').then(response => {
       if (response && Array.isArray(response.data)) {
         response.data.forEach(point => {
-          L.marker([point.latitude, point.longitude])
-            .addTo(map)
-            .bindPopup(`Device ID: ${point.device_id}<br>Timestamp: ${point.timestamp}`)
-            .openPopup();
+          var marker = L.marker([point.latitude, point.longitude]).addTo(map);
+          marker.bindPopup(`Device ID: ${point.device_id}<br>Timestamp: ${point.timestamp}<br>Geo-fence: ${point.geo_fence_status ? 'Dedans' : 'Dehors'}`);
+          marker.on('click', function(e) {
+            marker.openPopup();
+          });
         });
       } else {
         console.error('Les données GPS ne sont pas au bon format:', response);
       }
     }).catch(error => {
       console.error('Erreur lors de la récupération des données GPS:', error);
+    });
+
+    // Afficher les polygones de géofencing actifs
+    fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/geofencing-data').then(response => {
+      if (response && Array.isArray(response.data)) {
+        response.data.forEach(polygon => {
+          if (polygon.active) {
+            const latlngs = polygon.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
+            L.polygon(latlngs, { color: 'blue' }).addTo(map);
+          }
+        });
+      } else {
+        console.error('Les données de geofencing ne sont pas au bon format:', response);
+      }
+    }).catch(error => {
+      console.error('Erreur lors de la récupération des données de geofencing:', error);
     });
   }
 
@@ -201,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Attacher les événements aux boutons du popup
+                        // Attacher les événements aux boutons du popup
             document.getElementById('toggle-active').addEventListener('click', toggleActive);
             document.getElementById('delete-polygon').addEventListener('click', deletePolygon);
           });
