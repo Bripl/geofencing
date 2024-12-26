@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const polygonData = {
           name: polygonName,
           geometry: drawnPolygon.toGeoJSON().geometry,
-          active: false  // Polygones créés par défaut comme inactifs
+          active: false
         };
 
         fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function toggleActive() {
-              fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, active: newValue })
+              fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
                 .then(response => {
                   alert(`Polygone ${newValue ? 'activé' : 'désactivé'} avec succès!`);
                   polygon.active = newValue;
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(response => {
                   alert('Polygone supprimé avec succès!');
                   map.removeLayer(layer);
-                  map.closePopup();
+                  map.closePopup(); // Fermer le popup
                 })
                 .catch(error => {
                   console.error('Erreur lors de la suppression du polygone:', error);
@@ -222,11 +222,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('show-gps-button').addEventListener('click', (e) => {
-      e.preventDefault();
-      const center = map.getCenter();
-      const zoom = map.getZoom();
-      const url = `show_gps_points.html?lat=${center.lat}&lng=${center.lng}&zoom=${zoom}`;
-      window.location.href = url;
-    });
-  }
+  e.preventDefault();
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+  const url = `show_gps_points.html?lat=${center.lat}&lng=${center.lng}&zoom=${zoom}`;
+  window.location.href = url;
 });
