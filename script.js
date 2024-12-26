@@ -222,9 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('show-gps-button').addEventListener('click', (e) => {
-  e.preventDefault();
-  const center = map.getCenter();
-  const zoom = map.getZoom();
-  const url = `show_gps_points.html?lat=${center.lat}&lng=${center.lng}&zoom=${zoom}`;
-  window.location.href = url;
+      e.preventDefault();
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      const url = `show_gps_points.html?lat=${center.lat}&lng=${center.lng}&zoom=${zoom}`;
+      window.location.href = url;
+    });
+  }
 });
