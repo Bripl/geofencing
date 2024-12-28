@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             function toggleActive() {
               const newValue = !polygon.active;
-              console.log('Toggle Active:', { name: polygon.name, newValue });  // Ajout de log
+              console.log('Toggle Active:', { name: polygon.name, newValue });
 
               fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/update-geofencing', 'POST', { name: polygon.name, newValue })
                 .then(response => {
@@ -199,7 +199,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch(error => {
                   console.error('Erreur lors de la mise à jour du booléen:', error);
                 });
+
+              // Réattache les événements après la mise à jour
+              document.getElementById('toggle-active').addEventListener('click', toggleActive);
+              document.getElementById('delete-polygon').addEventListener('click', deletePolygon);
             }
+
 
 
             function deletePolygon() {
