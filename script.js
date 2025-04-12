@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Envoi des données du polygone à un backend via POST
       fetchData('https://geofencing-8a9755fd6a46.herokuapp.com/API/save-geofencing', 'POST', polygonData)
         .then(response => {
+          console.log('Réponse du backend:', response); // Affichage des logs de réponse pour le débogage
           if (response) {
             alert('Polygone enregistré avec succès!');
           } else {
