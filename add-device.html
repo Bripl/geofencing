@@ -4,18 +4,44 @@
   <meta charset="UTF-8">
   <title>Ajouter un Device</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 2em; }
-    nav a { margin-right: 1em; }
-    form { max-width: 400px; margin-bottom: 2em; }
-    label { display: block; margin-top: 1em; }
-    input[type="text"] { width: 100%; padding: 0.5em; box-sizing: border-box; }
-    button { margin-top: 1em; padding: 0.7em 1.5em; background-color: #007BFF; border: none; color: white; cursor: pointer; }
-    button:hover { background-color: #0056b3; }
-    #result { font-weight: bold; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2em;
+    }
+    nav a {
+      margin-right: 1em;
+    }
+    form {
+      max-width: 400px;
+      margin-bottom: 2em;
+    }
+    label {
+      display: block;
+      margin-top: 1em;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5em;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1em;
+      padding: 0.7em 1.5em;
+      background-color: #007BFF;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #result {
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h1>Ajouter un Device</h1>
+  <h1>Ajouter un nouveau Device</h1>
   <nav>
     <a href="index.html">Accueil</a>
     <a href="draw_geofencing.html">Tracer des polygones</a>
@@ -34,36 +60,8 @@
   </form>
   
   <div id="result"></div>
-  
-  <script>
-    document.getElementById('device-form').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const device_id = document.getElementById('device_id').value.trim();
-      const name = document.getElementById('name').value.trim();
-      
-      const payload = { device_id, name };
-      
-      try {
-        const response = await fetch('/API/add-device', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        
-        const resultDiv = document.getElementById('result');
-        if (response.ok) {
-          const data = await response.json();
-          resultDiv.innerHTML = `<p style="color: green;">${data.message}</p>`;
-          document.getElementById('device-form').reset();
-        } else {
-          const errorData = await response.json();
-          resultDiv.innerHTML = `<p style="color: red;">Erreur: ${errorData.message}</p>`;
-        }
-      } catch (error) {
-        document.getElementById('result').innerHTML = `<p style="color: red;">Erreur: ${error.message}</p>`;
-      }
-    });
-  </script>
+
+  <!-- Inclusion du script.js qui gère également ce formulaire -->
+  <script src="script.js"></script>
 </body>
 </html>
