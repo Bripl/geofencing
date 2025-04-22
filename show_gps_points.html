@@ -2,20 +2,25 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Afficher les points GPS</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    nav a { margin-right: 1em; }
+    #gps-map { height: 600px; margin-top: 1em; }
+  </style>
 </head>
 <body>
   <h1>Afficher les points GPS</h1>
   <nav>
-    <a href="index.html">Retour à l'accueil</a> | 
-    <a href="draw_geofencing.html">Tracer des polygones</a> | 
+    <a href="index.html">Accueil</a>
+    <a href="draw_geofencing.html">Tracer des polygones</a>
     <a href="manage_geofencing.html">Gérer les polygones</a>
+    <a href="add-device.html">Ajouter un node</a>
   </nav>
 
-  <!-- Carte -->
-  <div id="gps-map" style="height: 600px;"></div>
+  <!-- Carte pour afficher les points GPS -->
+  <div id="gps-map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="script.js"></script>

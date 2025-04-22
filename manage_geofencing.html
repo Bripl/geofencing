@@ -2,22 +2,28 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gérer les polygones</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    nav a { margin-right: 1em; }
+    #manage-geofencing-map { height: 600px; margin-top: 1em; }
+  </style>
 </head>
 <body>
   <h1>Gérer les polygones</h1>
   <nav>
-    <a href="index.html">Retour à l'accueil</a> | 
-    <a href="draw_geofencing.html">Tracer des polygones</a> | 
-    <a href="show_gps_points.html" id="show-gps-button">Afficher les points GPS</a>
+    <a href="index.html">Accueil</a>
+    <a href="draw_geofencing.html">Tracer des polygones</a>
+    <a href="show_gps_points.html">Afficher les points GPS</a>
+    <a href="add-device.html">Ajouter un node</a>
   </nav>
 
-  <!-- Carte -->
-  <div id="manage-geofencing-map" style="height: 600px;"></div>
+  <!-- Carte pour la gestion des polygones -->
+  <div id="manage-geofencing-map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- On réutilise script.js s'il gère aussi cette page -->
   <script src="script.js"></script>
 </body>
 </html>

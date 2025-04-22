@@ -4,41 +4,25 @@
   <meta charset="UTF-8">
   <title>Ajouter un Device</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 2em;
-    }
-    form {
-      max-width: 400px;
-      margin-bottom: 2em;
-    }
-    label {
-      display: block;
-      margin-top: 1em;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 0.5em;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 1em;
-      padding: 0.7em 1.5em;
-      background-color: #007BFF;
-      border: none;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #result {
-      font-weight: bold;
-    }
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    nav a { margin-right: 1em; }
+    form { max-width: 400px; margin-bottom: 2em; }
+    label { display: block; margin-top: 1em; }
+    input[type="text"] { width: 100%; padding: 0.5em; box-sizing: border-box; }
+    button { margin-top: 1em; padding: 0.7em 1.5em; background-color: #007BFF; border: none; color: white; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    #result { font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>Ajouter un nouveau Device</h1>
+  <h1>Ajouter un Device</h1>
+  <nav>
+    <a href="index.html">Accueil</a>
+    <a href="draw_geofencing.html">Tracer des polygones</a>
+    <a href="manage_geofencing.html">Gérer les polygones</a>
+    <a href="show_gps_points.html">Afficher les points GPS</a>
+  </nav>
+  
   <form id="device-form">
     <label for="device_id">Device ID :</label>
     <input type="text" id="device_id" name="device_id" required>
@@ -63,9 +47,7 @@
       try {
         const response = await fetch('/API/add-device', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         

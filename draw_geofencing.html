@@ -2,24 +2,36 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tracer des polygones</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    nav a { margin-right: 1em; }
+    #geofencing-map { height: 600px; margin-top: 1em; }
+    label { display: block; margin-top: 1em; }
+  </style>
 </head>
 <body>
   <h1>Tracer des polygones</h1>
+  <nav>
+    <a href="index.html">Accueil</a>
+    <a href="manage_geofencing.html">Gérer les polygones</a>
+    <a href="show_gps_points.html">Afficher les points GPS</a>
+    <a href="add-device.html">Ajouter un node</a>
+  </nav>
 
   <!-- Champ pour entrer le nom du polygone -->
-  <label for="polygon-name">Nom du polygone:</label>
+  <label for="polygon-name">Nom du polygone :</label>
   <input type="text" id="polygon-name" name="polygon-name" />
   <button id="save-polygon">Enregistrer le polygone</button>
 
   <!-- Carte -->
-  <div id="geofencing-map" style="height: 600px;"></div>
+  <div id="geofencing-map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <!-- Votre fichier script.js contient la logique de dessin et l'enregistrement -->
   <script src="script.js"></script>
 </body>
 </html>
