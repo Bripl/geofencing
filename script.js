@@ -62,7 +62,6 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
     
     alert(`Action envoyée avec succès : ${actionText}, Heure : ${selectedHour === 48 ? 'Immédiate' : selectedHour}`);
     
-    // Recharger les polygones pour refléter les changements
     if (typeof fetchPolygons === 'function') {
       fetchPolygons();
     } else {
@@ -74,7 +73,7 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
   }
 }
 
-// Exposer globalement updateAssignmentWithHour pour être accessible via onclick
+// Exposer globalement updateAssignmentWithHour pour être utilisé via onclick
 window.updateAssignmentWithHour = updateAssignmentWithHour;
 
 /* ---------------------------------------------------------------------
@@ -93,15 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const geofences = await fetchData(API_BASE_URL + '/API/get-geofences');
         console.log("Polygones reçus:", geofences);
-        // Effacer les anciens calques (si besoin)
+        // Optionnel: effacer tous les calques autres que le tileLayer pour renouveler la vue
         map.eachLayer(layer => {
-          if (layer.options && layer.options.attribution && layer.options.attribution.includes('OpenStreetMap')) {
-            // Ne pas retirer la couche tileLayer OpenStreetMap
-            return;
-          }
+          if (layer.options && layer.options.attribution && layer.options.attribution.includes('OpenStreetMap')) return;
           map.removeLayer(layer);
         });
-        // Réajouter le tileLayer
+        // Réajouter le tileLayer si nécessaire
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
         }).addTo(map);
@@ -117,15 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
           // Au clic sur le polygone, récupérer les assignations associées
           polygon.on('click', async () => {
             try {
-              const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${geofence.polygon_id}`);
+              // On s'assure que polygon_id est du même type que dans la BDD
+              const polygonIdParam = geofence.polygon_id; // vérifiez ici si c'est un nombre ou une chaîne
+              const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${polygonIdParam}`);
               console.log("Assignments pour le polygone :", geofence.name, assignments);
               let assignmentInfo = `<strong>Polygone :</strong> ${geofence.name}<br><strong>Nodes associés :</strong><ul>`;
               assignments.forEach(assignment => {
                 // Construction d'un sélecteur pour choisir l'heure (0 à 47 pour des demi-heures, 48 pour immédiat)
                 const hourOptions = Array.from({ length: 49 }, (_, i) => {
-                  if (i === 48) {
-                    return `<option value="${i}">Immédiat</option>`;
-                  }
+                  if (i === 48) return `<option value="${i}">Immédiat</option>`;
                   const hours = Math.floor(i / 2);
                   const minutes = (i % 2) * 30;
                   return `<option value="${i}">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}</option>`;
@@ -160,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Charger les polygones dès l'initialisation
     fetchPolygons();
     
-    // Exposer globalement fetchPolygons
+    // Exposer globalement fetchPolygons pour que updateAssignmentWithHour puisse y accéder
     window.fetchPolygons = fetchPolygons;
   }
 });
@@ -198,10 +194,36 @@ document.addEventListener('DOMContentLoaded', () => {
       drawnItems.addLayer(drawnPolygon);
     });
     
+    // Charger les nodes pour remplir le select de la page draw_geofencing
+    async function loadNodes() {
+      try {
+        const nodes = await fetchData(API_BASE_URL + '/API/get-nodes');
+        console.log("Nodes récupérés :", nodes);
+        const nodeSelectElem = document.getElementById('node-select');
+        if (nodeSelectElem) {
+          nodeSelectElem.innerHTML = "";
+          nodes.forEach(node => {
+            const option = document.createElement('option');
+            // Assumez que la colonne "id" ou "device_id" contient l'identifiant
+            option.value = node.id || node.device_id;
+            // Affichez un libellé pertinent (ex. "Nom", "id", etc.)
+            option.text = node.name || node.nom || node.id;
+            nodeSelectElem.appendChild(option);
+          });
+        } else {
+          console.warn("L'élément #node-select est introuvable sur la page draw_geofencing.");
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des nodes :", error);
+      }
+    }
+    // Charger dès l'initialisation de draw_geofencing
+    loadNodes();
+    
     document.getElementById('save-polygon').addEventListener('click', () => {
       const polygonName = document.getElementById('polygon-name').value;
       const nodeSelect = document.getElementById('node-select');
-      // Récupération des device_id sélectionnés dans le select
+      // Récupération des device_id sélectionnés
       const selectedNodes = Array.from(nodeSelect.selectedOptions).map(option => option.value);
       
       if (drawnPolygon && polygonName && selectedNodes.length > 0) {
