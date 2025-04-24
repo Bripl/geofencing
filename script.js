@@ -1,35 +1,93 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // Définir l'URL de base de votre backend
-  const API_BASE_URL = 'https://geofencing-8a9755fd6a46.herokuapp.com';
-  console.log("API_BASE_URL:", API_BASE_URL);
+// Définir l'URL de base de votre backend
+const API_BASE_URL = 'https://geofencing-8a9755fd6a46.herokuapp.com';
+console.log("API_BASE_URL:", API_BASE_URL);
 
-  // Fonction pour gérer les requêtes AJAX vers le backend
-  async function fetchData(url, method = 'GET', body = null) {
-    console.log("fetchData appelé avec:", url, method, body);
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : null,
-    });
+// Fonction pour gérer les requêtes AJAX vers le backend
+async function fetchData(url, method = 'GET', body = null) {
+  console.log("fetchData appelé avec:", url, method, body);
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : null,
+  });
 
-    console.log("Réponse reçue avec le status:", response.status);
+  console.log("Réponse reçue avec le status:", response.status);
 
-    if (!response.ok) {
-      throw new Error(`Erreur HTTP! Statut: ${response.status}`);
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return response.json();
-    }
-    return null;
+  if (!response.ok) {
+    throw new Error(`Erreur HTTP! Statut: ${response.status}`);
   }
 
-  // -------------------------------
-  // Gestion des polygones pour manage_geofencing.html
-  // -------------------------------
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return response.json();
+  }
+  return null;
+}
+
+// Fonction pour activer/désactiver un polygone
+async function updateAssignment(device_id, polygon_id, action) {
+  console.log(`updateAssignment appelée avec device_id=${device_id}, polygon_id=${polygon_id}, action=${action}`);
+  const currentTime = Math.floor(Date.now() / 1000); // Temps actuel en secondes UNIX
+  const payload = {
+    action, // 0 = activer, 1 = désactiver
+    polygon_id,
+    timestamp: currentTime,
+    device_id,
+  };
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/API/update-assignment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    console.log('Réponse de mise à jour :', result);
+    alert(`Action envoyée avec succès : ${action === 0 ? 'Activer' : 'Désactiver'}`);
+    fetchPolygons(); // Recharger les polygones pour refléter les changements
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de l\'assignation :', error);
+    alert('Erreur lors de la mise à jour.');
+  }
+}
+
+// Fonction pour supprimer un polygone
+async function deleteAssignment(device_id, polygon_id) {
+  console.log(`deleteAssignment appelée avec device_id=${device_id}, polygon_id=${polygon_id}`);
+  const currentTime = Math.floor(Date.now() / 1000); // Temps actuel en secondes UNIX
+  const payload = {
+    action: 2, // 2 = supprimer
+    polygon_id,
+    timestamp: currentTime,
+    device_id,
+  };
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/API/delete-assignment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    console.log('Réponse de suppression :', result);
+    alert('Suppression envoyée avec succès');
+    fetchPolygons(); // Recharger les polygones pour refléter les changements
+  } catch (error) {
+    console.error('Erreur lors de la suppression de l\'assignation :', error);
+    alert('Erreur lors de la suppression.');
+  }
+}
+
+// Exposer les fonctions globalement
+window.updateAssignment = updateAssignment;
+window.deleteAssignment = deleteAssignment;
+
+// -------------------------------
+// Gestion des polygones pour manage_geofencing.html
+// -------------------------------
+document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('manage-geofencing-map')) {
     const map = L.map('manage-geofencing-map').setView([48.8566, 2.3522], 13); // Paris par défaut
 
@@ -85,62 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Fonction pour activer/désactiver un polygone
-    async function updateAssignment(device_id, polygon_id, action) {
-      const currentTime = Math.floor(Date.now() / 1000); // Temps actuel en secondes UNIX
-      const payload = {
-        action, // 0 = activer, 1 = désactiver
-        polygon_id,
-        timestamp: currentTime,
-        device_id,
-      };
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/API/update-assignment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        console.log('Réponse de mise à jour :', result);
-        alert(`Action envoyée avec succès : ${action === 0 ? 'Activer' : 'Désactiver'}`);
-        fetchPolygons(); // Recharger les polygones pour refléter les changements
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour de l\'assignation :', error);
-        alert('Erreur lors de la mise à jour.');
-      }
-    }
-
-    // Fonction pour supprimer un polygone
-    async function deleteAssignment(device_id, polygon_id) {
-      const currentTime = Math.floor(Date.now() / 1000); // Temps actuel en secondes UNIX
-      const payload = {
-        action: 2, // 2 = supprimer
-        polygon_id,
-        timestamp: currentTime,
-        device_id,
-      };
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/API/delete-assignment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        console.log('Réponse de suppression :', result);
-        alert('Suppression envoyée avec succès');
-        fetchPolygons(); // Recharger les polygones pour refléter les changements
-      } catch (error) {
-        console.error('Erreur lors de la suppression de l\'assignation :', error);
-        alert('Erreur lors de la suppression.');
-      }
-    }
-
     fetchPolygons(); // Charger les polygones au démarrage
   }
-window.updateAssignment = updateAssignment;
-window.deleteAssignment = deleteAssignment;
-
-  // Fin du script complet : fermeture manquante
 });
