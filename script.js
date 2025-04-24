@@ -26,16 +26,18 @@ async function fetchData(url, method = 'GET', body = null) {
   return null;
 }
 
-// Fonction pour activer/désactiver un polygone avec l’heure sélectionnée
+// Fonction pour activer/désactiver/supprimer une assignation avec l’heure sélectionnée
+// Actions : 1 = activé, 2 = désactivé, 3 = supprimé
 async function updateAssignmentWithHour(device_id, polygon_id, action) {
   const hourSelector = document.getElementById(`activation-hour-${device_id}-${polygon_id}`);
-  const selectedHour = parseInt(hourSelector.value, 10); // Récupérer l'heure sélectionnée (0-48)
-
+  // Pour l'action de suppression, il n’y aura pas de sélecteur d’heure, on utilise 0 par défaut.
+  const selectedHour = hourSelector ? parseInt(hourSelector.value, 10) : 0;
   console.log(`updateAssignmentWithHour appelée avec device_id=${device_id}, polygon_id=${polygon_id}, action=${action}, heure=${selectedHour}`);
+
   const payload = {
-    action, // 0 = activer, 1 = désactiver
+    action,         // 1 = activé, 2 = désactivé, 3 = supprimé
     polygon_id,
-    hour: selectedHour, // L'heure encodée dans le payload
+    hour: selectedHour, // L'heure encodée dans le payload (0-48)
     device_id,
   };
 
@@ -47,42 +49,29 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
     });
     const result = await response.json();
     console.log('Réponse de mise à jour avec heure :', result);
-    alert(`Action envoyée avec succès : ${action === 0 ? 'Activer' : 'Désactiver'}, Heure : ${selectedHour === 48 ? 'Immédiate' : selectedHour}`);
-    fetchPolygons(); // Recharger les polygones pour refléter les changements
+    
+    // Définir l’intitulé de l’action en fonction de la valeur envoyée
+    let actionText;
+    if (action === 1) {
+      actionText = 'Activer';
+    } else if (action === 2) {
+      actionText = 'Désactiver';
+    } else if (action === 3) {
+      actionText = 'Supprimer';
+    }
+    alert(`Action envoyée avec succès : ${actionText}, Heure : ${selectedHour === 48 ? 'Immédiate' : selectedHour}`);
+    
+    // Recharger les polygones pour refléter les changements
+    if (typeof fetchPolygons === 'function') {
+      fetchPolygons();
+    } else {
+      console.warn("fetchPolygons n'est pas défini.");
+    }
   } catch (error) {
     console.error('Erreur lors de la mise à jour de l\'assignation avec heure :', error);
     alert('Erreur lors de la mise à jour.');
   }
 }
-
-// Fonction pour supprimer un polygone
-async function deleteAssignment(device_id, polygon_id) {
-  console.log(`deleteAssignment appelée avec device_id=${device_id}, polygon_id=${polygon_id}`);
-  const payload = {
-    action: 2, // 2 = supprimer
-    polygon_id,
-    device_id,
-  };
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/API/delete-assignment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const result = await response.json();
-    console.log('Réponse de suppression :', result);
-    alert('Suppression envoyée avec succès');
-    fetchPolygons(); // Recharger les polygones pour refléter les changements
-  } catch (error) {
-    console.error('Erreur lors de la suppression de l\'assignation :', error);
-    alert('Erreur lors de la suppression.');
-  }
-}
-
-// Exposer les fonctions globalement
-window.updateAssignmentWithHour = updateAssignmentWithHour;
-window.deleteAssignment = deleteAssignment;
 
 // -------------------------------
 // Gestion des polygones pour manage_geofencing.html
@@ -95,24 +84,21 @@ document.addEventListener('DOMContentLoaded', () => {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    // Charger les polygones depuis geofences
+    // Fonction pour charger et afficher les polygones depuis "geofences"
     async function fetchPolygons() {
       try {
         const geofences = await fetchData(API_BASE_URL + '/API/get-geofences');
         console.log("Polygones reçus:", geofences);
 
+        // Pour chaque polygone reçu, le décoder et l'afficher sur la carte
         geofences.forEach(geofence => {
-          // Convertir GeoJSON en format Leaflet ([latitude, longitude])
           const leafletCoordinates = geofence.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
-
-          // Créer et ajouter le polygone à la carte
           const polygon = L.polygon(leafletCoordinates, {
-            color: geofence.active ? 'green' : 'red', // Couleur selon l'état (active/inactive)
+            color: geofence.active ? 'green' : 'red',
           }).addTo(map);
-
           polygon.bindPopup(`<strong>Polygone :</strong> ${geofence.name}`);
 
-          // Ajouter un événement de clic pour récupérer les infos de validation
+          // Lors du clic sur un polygone, récupérer et afficher les assignations
           polygon.on('click', async () => {
             try {
               const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${geofence.polygon_id}`);
@@ -128,17 +114,18 @@ document.addEventListener('DOMContentLoaded', () => {
                   const minutes = (i % 2) * 30;
                   return `<option value="${i}">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}</option>`;
                 }).join('');
-
                 assignmentInfo += `
                   <li>
                     Device : ${assignment.device_id} - Actif : ${assignment.active ? 'Oui' : 'Non'}
                     <select id="activation-hour-${assignment.device_id}-${geofence.polygon_id}">
                       ${hourOptions}
                     </select>
-                    <button onclick="updateAssignmentWithHour('${assignment.device_id}', ${geofence.polygon_id}, ${assignment.active ? 1 : 0})">
+                    <button onclick="updateAssignmentWithHour('${assignment.device_id}', ${geofence.polygon_id}, ${assignment.active ? 2 : 1})">
                       ${assignment.active ? 'Désactiver' : 'Activer'}
                     </button>
-                    <button onclick="deleteAssignment('${assignment.device_id}', ${geofence.polygon_id})">Supprimer</button>
+                    <button onclick="updateAssignmentWithHour('${assignment.device_id}', ${geofence.polygon_id}, 3)">
+                      Supprimer
+                    </button>
                   </li>`;
               });
               assignmentInfo += '</ul>';
@@ -154,6 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    fetchPolygons(); // Charger les polygones au démarrage
+    // Charger les polygones dès le démarrage
+    fetchPolygons();
+    
+    // Exposer globalement fetchPolygons pour qu'elle soit accessible de l'extérieur
+    window.fetchPolygons = fetchPolygons;
   }
 });
+
+// Exposer globalement updateAssignmentWithHour afin qu'elle soit utilisable dans les attributs onclick
+window.updateAssignmentWithHour = updateAssignmentWithHour;
