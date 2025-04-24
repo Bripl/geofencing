@@ -62,7 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
               let assignmentInfo = `<strong>Polygone :</strong> ${geofence.name}<br><strong>Nodes associés :</strong><ul>`;
               assignments.forEach(assignment => {
-                assignmentInfo += `<li>Device : ${assignment.device_id} - Actif : ${assignment.active ? 'Oui' : 'Non'}</li>`;
+                assignmentInfo += `
+                  <li>
+                    Device : ${assignment.device_id} - Actif : ${assignment.active ? 'Oui' : 'Non'}
+                    <button onclick="updateAssignment('${assignment.device_id}', ${geofence.polygon_id}, ${assignment.active ? 1 : 0})">
+                      ${assignment.active ? 'Désactiver' : 'Activer'}
+                    </button>
+                    <button onclick="deleteAssignment('${assignment.device_id}', ${geofence.polygon_id})">Supprimer</button>
+                  </li>
+                `;
               });
               assignmentInfo += '</ul>';
               polygon.bindPopup(assignmentInfo).openPopup();
@@ -74,6 +82,58 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       } catch (error) {
         console.error('Erreur lors du chargement des polygones :', error);
+      }
+    }
+
+    // Fonction pour activer/désactiver un polygone
+    async function updateAssignment(device_id, polygon_id, action) {
+      const currentTime = Math.floor(Date.now() / 1000); // Temps actuel en secondes UNIX
+      const payload = {
+        action, // 0 = activer, 1 = désactiver
+        polygon_id,
+        timestamp: currentTime,
+        device_id,
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/API/update-assignment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        console.log('Réponse de mise à jour :', result);
+        alert(`Action envoyée avec succès : ${action === 0 ? 'Activer' : 'Désactiver'}`);
+        fetchPolygons(); // Recharger les polygones pour refléter les changements
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour de l\'assignation :', error);
+        alert('Erreur lors de la mise à jour.');
+      }
+    }
+
+    // Fonction pour supprimer un polygone
+    async function deleteAssignment(device_id, polygon_id) {
+      const currentTime = Math.floor(Date.now() / 1000); // Temps actuel en secondes UNIX
+      const payload = {
+        action: 2, // 2 = supprimer
+        polygon_id,
+        timestamp: currentTime,
+        device_id,
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/API/delete-assignment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        console.log('Réponse de suppression :', result);
+        alert('Suppression envoyée avec succès');
+        fetchPolygons(); // Recharger les polygones pour refléter les changements
+      } catch (error) {
+        console.error('Erreur lors de la suppression de l\'assignation :', error);
+        alert('Erreur lors de la suppression.');
       }
     }
 
@@ -162,32 +222,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // -------------------------------
-  // Gestion des devices pour add-device.html
-  // -------------------------------
-  if (document.getElementById('device-form')) {
-    document.getElementById('device-form').addEventListener('submit', async function (e) {
-      e.preventDefault();
-      const device_id = document.getElementById('device_id').value.trim();
-      const name = document.getElementById('name').value.trim();
-      const payload = { device_id, name };
-      console.log("Envoi du device:", payload);
-
-      try {
-        const response = await fetchData(API_BASE_URL + '/API/add-device', 'POST', payload);
-        console.log("Réponse pour l'ajout du device:", response);
-        const resultDiv = document.getElementById('result');
-        if (resultDiv) {
-          resultDiv.innerHTML = `<p style="color: green;">${response.message}</p>`;
-          document.getElementById('device-form').reset();
-        }
-      } catch (error) {
-        const resultDiv = document.getElementById('result');
-        if (resultDiv) {
-          resultDiv.innerHTML = `<p style="color: red;">Erreur: ${error.message}</p>`;
-        }
-        console.error("Erreur lors de l'ajout du device:", error);
-      }
-    });
-  }
-});
+  // ----------------
