@@ -195,28 +195,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Charger les nodes pour remplir le select de la page draw_geofencing
-    async function loadNodes() {
-      try {
-        const nodes = await fetchData(API_BASE_URL + '/API/get-nodes');
-        console.log("Nodes récupérés :", nodes);
-        const nodeSelectElem = document.getElementById('node-select');
-        if (nodeSelectElem) {
-          nodeSelectElem.innerHTML = "";
-          nodes.forEach(node => {
-            const option = document.createElement('option');
-            // Assumez que la colonne "id" ou "device_id" contient l'identifiant
-            option.value = node.id || node.device_id;
-            // Affichez un libellé pertinent (ex. "Nom", "id", etc.)
-            option.text = node.name || node.nom || node.id;
-            nodeSelectElem.appendChild(option);
-          });
-        } else {
-          console.warn("L'élément #node-select est introuvable sur la page draw_geofencing.");
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des nodes :", error);
-      }
-    }
+	async function loadNodes() {
+	  try {
+		const nodes = await fetchData(API_BASE_URL + '/API/get-nodes');
+		console.log("Nodes récupérés :", nodes);
+		const nodeSelectElem = document.getElementById('node-select');
+		if (nodeSelectElem) {
+		  nodeSelectElem.innerHTML = "";
+		  nodes.forEach(node => {
+			const option = document.createElement('option');
+			// Utiliser node.device_id comme valeur
+			option.value = node.device_id;
+			// Afficher "name (device_id)" par exemple
+			option.text = `${node.name || node.nom || node.device_id} (${node.device_id})`;
+			nodeSelectElem.appendChild(option);
+		  });
+		} else {
+		  console.warn("L'élément #node-select est introuvable sur la page draw_geofencing.");
+		}
+	  } catch (error) {
+		console.error("Erreur lors du chargement des nodes :", error);
+	  }
+	}
+
     // Charger dès l'initialisation de draw_geofencing
     loadNodes();
     
