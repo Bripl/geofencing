@@ -139,6 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchPolygons(); // Charger les polygones au démarrage
   }
+window.updateAssignment = updateAssignment;
+window.deleteAssignment = deleteAssignment;
 
   // Fin du script complet : fermeture manquante
 });
