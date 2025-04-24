@@ -44,7 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Polygones reçus:", geofences);
 
         geofences.forEach(geofence => {
-          const polygon = L.polygon(geofence.geometry.coordinates, {
+          // Convertir GeoJSON en format Leaflet ([latitude, longitude])
+          const leafletCoordinates = geofence.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
+
+          // Créer et ajouter le polygone à la carte
+          const polygon = L.polygon(leafletCoordinates, {
             color: geofence.active ? 'green' : 'red', // Couleur selon l'état (active/inactive)
           }).addTo(map);
 
