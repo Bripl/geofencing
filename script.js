@@ -28,6 +28,55 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------
+  // Gestion des polygones pour manage_geofencing.html
+  // -------------------------------
+  if (document.getElementById('manage-geofencing-map')) {
+    const map = L.map('manage-geofencing-map').setView([48.8566, 2.3522], 13); // Paris par défaut
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+
+    // Charger les polygones depuis geofences
+    async function fetchPolygons() {
+      try {
+        const geofences = await fetchData(API_BASE_URL + '/API/get-geofences');
+        console.log("Polygones reçus:", geofences);
+
+        geofences.forEach(geofence => {
+          const polygon = L.polygon(geofence.geometry.coordinates, {
+            color: geofence.active ? 'green' : 'red', // Couleur selon l'état (active/inactive)
+          }).addTo(map);
+
+          polygon.bindPopup(`<strong>Polygone :</strong> ${geofence.name}`);
+
+          // Ajouter un événement de clic pour récupérer les infos de validation
+          polygon.on('click', async () => {
+            try {
+              const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${geofence.polygon_id}`);
+              console.log("Assignments pour le polygone :", geofence.name, assignments);
+
+              let assignmentInfo = `<strong>Polygone :</strong> ${geofence.name}<br><strong>Nodes associés :</strong><ul>`;
+              assignments.forEach(assignment => {
+                assignmentInfo += `<li>Device : ${assignment.device_id} - Actif : ${assignment.active ? 'Oui' : 'Non'}</li>`;
+              });
+              assignmentInfo += '</ul>';
+              polygon.bindPopup(assignmentInfo).openPopup();
+            } catch (error) {
+              console.error("Erreur lors de la récupération des assignments :", error);
+              polygon.bindPopup(`<strong>Erreur :</strong> Impossible de récupérer les informations du polygone.`).openPopup();
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Erreur lors du chargement des polygones :', error);
+      }
+    }
+
+    fetchPolygons(); // Charger les polygones au démarrage
+  }
+
+  // -------------------------------
   // Chargement des nodes pour le select (dans draw_geofencing.html)
   // -------------------------------
   if (document.getElementById('node-select')) {
@@ -50,9 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------
-  // GESTION DU POLYGONE pour draw_geofencing.html (et pages similaires)
+  // Gestion du polygone pour draw_geofencing.html
   // -------------------------------
-  
   if (document.getElementById('geofencing-map')) {
     const map = L.map('geofencing-map').setView([48.8566, 2.3522], 13); // Paris par défaut
 
@@ -85,29 +133,24 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-polygon').addEventListener('click', () => {
       const polygonName = document.getElementById('polygon-name').value;
       const nodeSelect = document.getElementById('node-select');
-      // Récupération des device_id sélectionnés dans le select
       const selectedNodes = Array.from(nodeSelect.selectedOptions).map(option => option.value);
-      
-      // On vérifie qu'un polygone a bien été dessiné, qu'un nom est fourni et qu'au moins un node est sélectionné
+
       if (drawnPolygon && polygonName && selectedNodes.length > 0) {
         const polygonData = {
           name: polygonName,
           geometry: drawnPolygon.toGeoJSON().geometry,
           active: false,
-          nodes: selectedNodes  // Ajout de la propriété nodes pour la segmentation downlink
+          nodes: selectedNodes,
         };
         console.log("Envoi du polygone avec nodes:", polygonData);
         fetchData(API_BASE_URL + '/API/save-geofencing', 'POST', polygonData)
           .then(response => {
             console.log('Réponse du backend:', response);
-            if (response) {
-              alert('Polygone enregistré avec succès!');
-            } else {
-              alert('Insertion réussie sans retour de données.');
-            }
+            alert('Polygone enregistré avec succès!');
           })
           .catch(error => {
             console.error("Erreur lors de l'enregistrement du polygone:", error);
+            alert('Erreur lors de l\'enregistrement du polygone.');
           });
       } else {
         alert('Veuillez tracer un polygone, entrer un nom et sélectionner au moins un node.');
@@ -116,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------
-  // GESTION DES DEVICES pour add-device.html
+  // Gestion des devices pour add-device.html
   // -------------------------------
   if (document.getElementById('device-form')) {
     document.getElementById('device-form').addEventListener('submit', async function (e) {
