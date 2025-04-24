@@ -26,14 +26,16 @@ async function fetchData(url, method = 'GET', body = null) {
   return null;
 }
 
-// Fonction pour activer/désactiver un polygone
-async function updateAssignment(device_id, polygon_id, action) {
-  console.log(`updateAssignment appelée avec device_id=${device_id}, polygon_id=${polygon_id}, action=${action}`);
-  const currentTime = Math.floor(Date.now() / 1000); // Temps actuel en secondes UNIX
+// Fonction pour activer/désactiver un polygone avec l’heure sélectionnée
+async function updateAssignmentWithHour(device_id, polygon_id, action) {
+  const hourSelector = document.getElementById(`activation-hour-${device_id}-${polygon_id}`);
+  const selectedHour = parseInt(hourSelector.value, 10); // Récupérer l'heure sélectionnée (0-48)
+
+  console.log(`updateAssignmentWithHour appelée avec device_id=${device_id}, polygon_id=${polygon_id}, action=${action}, heure=${selectedHour}`);
   const payload = {
     action, // 0 = activer, 1 = désactiver
     polygon_id,
-    timestamp: currentTime,
+    hour: selectedHour, // L'heure encodée dans le payload
     device_id,
   };
 
@@ -44,11 +46,11 @@ async function updateAssignment(device_id, polygon_id, action) {
       body: JSON.stringify(payload),
     });
     const result = await response.json();
-    console.log('Réponse de mise à jour :', result);
-    alert(`Action envoyée avec succès : ${action === 0 ? 'Activer' : 'Désactiver'}`);
+    console.log('Réponse de mise à jour avec heure :', result);
+    alert(`Action envoyée avec succès : ${action === 0 ? 'Activer' : 'Désactiver'}, Heure : ${selectedHour === 48 ? 'Immédiate' : selectedHour}`);
     fetchPolygons(); // Recharger les polygones pour refléter les changements
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'assignation :', error);
+    console.error('Erreur lors de la mise à jour de l\'assignation avec heure :', error);
     alert('Erreur lors de la mise à jour.');
   }
 }
@@ -56,11 +58,9 @@ async function updateAssignment(device_id, polygon_id, action) {
 // Fonction pour supprimer un polygone
 async function deleteAssignment(device_id, polygon_id) {
   console.log(`deleteAssignment appelée avec device_id=${device_id}, polygon_id=${polygon_id}`);
-  const currentTime = Math.floor(Date.now() / 1000); // Temps actuel en secondes UNIX
   const payload = {
     action: 2, // 2 = supprimer
     polygon_id,
-    timestamp: currentTime,
     device_id,
   };
 
@@ -81,7 +81,7 @@ async function deleteAssignment(device_id, polygon_id) {
 }
 
 // Exposer les fonctions globalement
-window.updateAssignment = updateAssignment;
+window.updateAssignmentWithHour = updateAssignmentWithHour;
 window.deleteAssignment = deleteAssignment;
 
 // -------------------------------
@@ -120,15 +120,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
               let assignmentInfo = `<strong>Polygone :</strong> ${geofence.name}<br><strong>Nodes associés :</strong><ul>`;
               assignments.forEach(assignment => {
+                const hourOptions = Array.from({ length: 49 }, (_, i) => {
+                  if (i === 48) {
+                    return `<option value="${i}">Immédiat</option>`;
+                  }
+                  const hours = Math.floor(i / 2);
+                  const minutes = (i % 2) * 30;
+                  return `<option value="${i}">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}</option>`;
+                }).join('');
+
                 assignmentInfo += `
                   <li>
                     Device : ${assignment.device_id} - Actif : ${assignment.active ? 'Oui' : 'Non'}
-                    <button onclick="updateAssignment('${assignment.device_id}', ${geofence.polygon_id}, ${assignment.active ? 1 : 0})">
+                    <select id="activation-hour-${assignment.device_id}-${geofence.polygon_id}">
+                      ${hourOptions}
+                    </select>
+                    <button onclick="updateAssignmentWithHour('${assignment.device_id}', ${geofence.polygon_id}, ${assignment.active ? 1 : 0})">
                       ${assignment.active ? 'Désactiver' : 'Activer'}
                     </button>
                     <button onclick="deleteAssignment('${assignment.device_id}', ${geofence.polygon_id})">Supprimer</button>
-                  </li>
-                `;
+                  </li>`;
               });
               assignmentInfo += '</ul>';
               polygon.bindPopup(assignmentInfo).openPopup();
