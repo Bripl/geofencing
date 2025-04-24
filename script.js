@@ -2,7 +2,10 @@
 const API_BASE_URL = 'https://geofencing-8a9755fd6a46.herokuapp.com';
 console.log("API_BASE_URL:", API_BASE_URL);
 
-// Fonction générique pour effectuer des requêtes AJAX vers le backend
+/* 
+Fonction générique pour effectuer des requêtes AJAX vers le backend.
+Utilisée partout dans le script.
+*/
 async function fetchData(url, method = 'GET', body = null) {
   console.log("fetchData appelé avec:", url, method, body);
   const response = await fetch(url, {
@@ -24,18 +27,18 @@ async function fetchData(url, method = 'GET', body = null) {
 /* 
 Fonction pour mettre à jour une assignation.
 Les actions sont définies comme suit :
-  1 = activé
-  2 = désactivé
-  3 = supprimé
-La fonction récupère, si disponible, le sélecteur d’heure (sauf pour la suppression),
-puis transmet le payload (action, polygon_id et hour) à l’endpoint update‑assignment.
+ 1 = activé
+ 2 = désactivé
+ 3 = supprimé
+La fonction récupère, si disponible, le sélecteur d'heure (pour les actions 1 et 2),
+puis transmet le payload (action, polygon_id et hour) à l’endpoint update-assignment.
 */
 async function updateAssignmentWithHour(device_id, polygon_id, action) {
   const hourSelector = document.getElementById(`activation-hour-${device_id}-${polygon_id}`);
-  // Pour la suppression (action 3), il n’y a pas de sélecteur d’heure, on utilise 0 par défaut.
+  // Pour l'action 3 (supprimé), aucun sélecteur d'heure n'est fourni, on utilise 0 par défaut.
   const selectedHour = hourSelector ? parseInt(hourSelector.value, 10) : 0;
   console.log(`updateAssignmentWithHour appelée avec device_id=${device_id}, polygon_id=${polygon_id}, action=${action}, heure=${selectedHour}`);
-
+  
   const payload = {
     action,         // 1 = activé, 2 = désactivé, 3 = supprimé
     polygon_id,
@@ -59,6 +62,7 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
     
     alert(`Action envoyée avec succès : ${actionText}, Heure : ${selectedHour === 48 ? 'Immédiate' : selectedHour}`);
     
+    // Recharger les polygones pour refléter les changements
     if (typeof fetchPolygons === 'function') {
       fetchPolygons();
     } else {
@@ -70,7 +74,7 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
   }
 }
 
-// Exposer globalement updateAssignmentWithHour pour qu'elle soit disponible via onclick
+// Exposer globalement updateAssignmentWithHour pour être accessible via onclick
 window.updateAssignmentWithHour = updateAssignmentWithHour;
 
 /* ---------------------------------------------------------------------
@@ -84,11 +88,23 @@ document.addEventListener('DOMContentLoaded', () => {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    // Fonction pour charger et afficher les polygones depuis /API/get-geofences
+    // Fonction pour charger et afficher les polygones depuis l'API /API/get-geofences
     async function fetchPolygons() {
       try {
         const geofences = await fetchData(API_BASE_URL + '/API/get-geofences');
         console.log("Polygones reçus:", geofences);
+        // Effacer les anciens calques (si besoin)
+        map.eachLayer(layer => {
+          if (layer.options && layer.options.attribution && layer.options.attribution.includes('OpenStreetMap')) {
+            // Ne pas retirer la couche tileLayer OpenStreetMap
+            return;
+          }
+          map.removeLayer(layer);
+        });
+        // Réajouter le tileLayer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(map);
         
         geofences.forEach(geofence => {
           // Conversion des coordonnées GeoJSON en coordonnées Leaflet ([lat, lon])
@@ -97,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             color: geofence.active ? 'green' : 'red',
           }).addTo(map);
           polygon.bindPopup(`<strong>Polygone :</strong> ${geofence.name}`);
-
+          
           // Au clic sur le polygone, récupérer les assignations associées
           polygon.on('click', async () => {
             try {
@@ -105,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
               console.log("Assignments pour le polygone :", geofence.name, assignments);
               let assignmentInfo = `<strong>Polygone :</strong> ${geofence.name}<br><strong>Nodes associés :</strong><ul>`;
               assignments.forEach(assignment => {
-                // Construction du sélecteur pour choisir l'heure (0 à 47 pour les demi-heures, 48 pour immédiat)
+                // Construction d'un sélecteur pour choisir l'heure (0 à 47 pour des demi-heures, 48 pour immédiat)
                 const hourOptions = Array.from({ length: 49 }, (_, i) => {
                   if (i === 48) {
                     return `<option value="${i}">Immédiat</option>`;
@@ -141,17 +157,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    // Charger les polygones dès le démarrage
+    // Charger les polygones dès l'initialisation
     fetchPolygons();
     
-    // Exposer globalement fetchPolygons pour qu'elle soit accessible à updateAssignmentWithHour
+    // Exposer globalement fetchPolygons
     window.fetchPolygons = fetchPolygons;
   }
 });
 
 /* ---------------------------------------------------------------------
    GESTION DU POLYGONE POUR LA PAGE draw_geofencing.html
-   (Utilisé pour tracer un polygone et l'envoyer segmenté)
+   (Utilisé pour tracer un polygone et l'envoyer de manière segmentée)
 --------------------------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('geofencing-map')) {
@@ -185,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-polygon').addEventListener('click', () => {
       const polygonName = document.getElementById('polygon-name').value;
       const nodeSelect = document.getElementById('node-select');
-      // Récupération des device_id sélectionnés
+      // Récupération des device_id sélectionnés dans le select
       const selectedNodes = Array.from(nodeSelect.selectedOptions).map(option => option.value);
       
       if (drawnPolygon && polygonName && selectedNodes.length > 0) {
