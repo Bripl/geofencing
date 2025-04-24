@@ -221,5 +221,3 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
-  // ----------------
