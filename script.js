@@ -1,4 +1,5 @@
 // Définir l'URL de base de votre backend
+// Définir l'URL de base de votre backend
 const API_BASE_URL = 'https://geofencing-8a9755fd6a46.herokuapp.com';
 console.log("API_BASE_URL:", API_BASE_URL);
 
@@ -26,23 +27,19 @@ async function fetchData(url, method = 'GET', body = null) {
 
 /* 
 Fonction pour mettre à jour une assignation.
-Les actions sont définies comme suit :
- 1 = activé
- 2 = désactivé
- 3 = supprimé
-La fonction récupère, si disponible, le sélecteur d'heure (pour les actions 1 et 2),
-puis transmet le payload (action, polygon_id et hour) à l’endpoint update-assignment.
+Les actions sont définies :
+ 1 = activer, 2 = désactiver, 3 = supprimer.
 */
 async function updateAssignmentWithHour(device_id, polygon_id, action) {
   const hourSelector = document.getElementById(`activation-hour-${device_id}-${polygon_id}`);
-  // Pour l'action 3 (supprimé), aucun sélecteur d'heure n'est fourni, on utilise 0 par défaut.
+  // Pour l'action 3 (supprimer), aucun sélecteur d'heure n'est utilisé, on prend 0 par défaut.
   const selectedHour = hourSelector ? parseInt(hourSelector.value, 10) : 0;
   console.log(`updateAssignmentWithHour appelée avec device_id=${device_id}, polygon_id=${polygon_id}, action=${action}, heure=${selectedHour}`);
   
   const payload = {
-    action,         // 1 = activé, 2 = désactivé, 3 = supprimé
+    action,         // 1 = activer, 2 = désactiver, 3 = supprimer
     polygon_id,
-    hour: selectedHour, // Valeur entre 0 et 48 (48 signifie "immediate")
+    hour: selectedHour, // Valeur entre 0 et 48 (48 = "immédiate")
     device_id,
   };
 
@@ -63,7 +60,7 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
     alert(`Action envoyée avec succès : ${actionText}, Heure : ${selectedHour === 48 ? 'Immédiate' : selectedHour}`);
     
     if (typeof fetchPolygons === 'function') {
-      fetchPolygons();
+      fetchPolygons(); // Actualiser l'affichage
     } else {
       console.warn("fetchPolygons n'est pas défini.");
     }
@@ -72,8 +69,6 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
     alert('Erreur lors de la mise à jour.');
   }
 }
-
-// Exposer globalement updateAssignmentWithHour pour être utilisé via onclick
 window.updateAssignmentWithHour = updateAssignmentWithHour;
 
 /* ---------------------------------------------------------------------
@@ -81,45 +76,65 @@ window.updateAssignmentWithHour = updateAssignmentWithHour;
 --------------------------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('manage-geofencing-map')) {
-    // Créer la carte pour la gestion des assignations
+    // Initialiser la carte
     const map = L.map('manage-geofencing-map').setView([48.8566, 2.3522], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    // Fonction pour charger et afficher les polygones depuis l'API /API/get-geofences
+    // Stocker globalement les polygones récupérés pour pouvoir les réutiliser (pour assignation)
+    window.globalGeofences = [];
+
     async function fetchPolygons() {
       try {
         const geofences = await fetchData(API_BASE_URL + '/API/get-geofences');
         console.log("Polygones reçus:", geofences);
-        // Optionnel: effacer tous les calques autres que le tileLayer pour renouveler la vue
+        window.globalGeofences = geofences; // stocker globalement
+        
+        // Effacer les calques existants sauf la couche de base
         map.eachLayer(layer => {
           if (layer.options && layer.options.attribution && layer.options.attribution.includes('OpenStreetMap')) return;
           map.removeLayer(layer);
         });
-        // Réajouter le tileLayer si nécessaire
+        // Réajouter la couche de fond
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
         }).addTo(map);
         
         geofences.forEach(geofence => {
-          // Conversion des coordonnées GeoJSON en coordonnées Leaflet ([lat, lon])
+          // Conversion GeoJSON -> coordonnées Leaflet ([lat, lng])
           const leafletCoordinates = geofence.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
           const polygon = L.polygon(leafletCoordinates, {
             color: geofence.active ? 'green' : 'red',
           }).addTo(map);
-          polygon.bindPopup(`<strong>Polygone :</strong> ${geofence.name}`);
           
-          // Au clic sur le polygone, récupérer les assignations associées
+          // Créer un popup contenant : le nom, un bouton de suppression et un module d'assignation
+          const popupContent = `
+            <strong>Polygone :</strong> ${geofence.name} (ID: ${geofence.polygon_id})<br>
+            <button onclick="deleteUnusedPolygon(${geofence.polygon_id})">
+              Supprimer le polygone s'il n'est pas assigné
+            </button>
+            <br><br>
+            <strong>Assigner à un Node :</strong><br>
+            <select id="node-select-${geofence.polygon_id}">
+              <option value="gps-test">gps-test</option>
+              <option value="device2">device2</option>
+              <!-- Ajoutez d'autres options de device ici -->
+            </select>
+            <button onclick="assignPolygonToNode(${geofence.polygon_id})">
+              Assigner ce polygone
+            </button>
+          `;
+          polygon.bindPopup(popupContent);
+          
+          // Si l'on clique sur le polygone, on affiche également la liste des assignations existantes
           polygon.on('click', async () => {
             try {
-              // On s'assure que polygon_id est du même type que dans la BDD
-              const polygonIdParam = geofence.polygon_id; // vérifiez ici si c'est un nombre ou une chaîne
-              const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${polygonIdParam}`);
+              const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${geofence.polygon_id}`);
               console.log("Assignments pour le polygone :", geofence.name, assignments);
-              let assignmentInfo = `<strong>Polygone :</strong> ${geofence.name}<br><strong>Nodes associés :</strong><ul>`;
+              let assignmentInfo = `<strong>Polygone :</strong> ${geofence.name} (ID: ${geofence.polygon_id})<br>
+                                    <strong>Nodes assignés :</strong><ul>`;
               assignments.forEach(assignment => {
-                // Construction d'un sélecteur pour choisir l'heure (0 à 47 pour des demi-heures, 48 pour immédiat)
                 const hourOptions = Array.from({ length: 49 }, (_, i) => {
                   if (i === 48) return `<option value="${i}">Immédiat</option>`;
                   const hours = Math.floor(i / 2);
@@ -143,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
               assignmentInfo += '</ul>';
               polygon.bindPopup(assignmentInfo).openPopup();
             } catch (error) {
-              console.error("Erreur lors de la récupération des assignments :", error);
+              console.error("Erreur lors de la récupération des assignations :", error);
               polygon.bindPopup(`<strong>Erreur :</strong> Impossible de récupérer les informations du polygone.`).openPopup();
             }
           });
@@ -153,13 +168,77 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    // Charger les polygones dès l'initialisation
     fetchPolygons();
-    
-    // Exposer globalement fetchPolygons pour que updateAssignmentWithHour puisse y accéder
     window.fetchPolygons = fetchPolygons;
   }
 });
+
+/* ----------------------------------------------------------------------------
+   FONCTIONS POUR SUPPRESSION ET ASSIGNATION
+----------------------------------------------------------------------------- */
+
+// Supprimer un polygone depuis geofences si aucune assignation n'existe dans polygon_assignments
+async function deleteUnusedPolygon(polygon_id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/API/delete-unused-polygon`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ polygon_id })
+    });
+    const result = await response.json();
+    if (response.ok) {
+      alert(result.message);
+      if (typeof fetchPolygons === 'function') {
+        fetchPolygons();
+      }
+    } else {
+      alert(result.message);
+    }
+  } catch (error) {
+    console.error("Erreur lors de la suppression du polygone :", error);
+    alert("Erreur lors de la suppression du polygone.");
+  }
+}
+
+// Assigner un polygone existant à un node (lancer la segmentation)
+// Ici, on appelle l'endpoint /API/save-geofencing qui, s'il détecte un polygone existant,
+// lance directement le processus de segmentation pour le node spécifié.
+async function assignPolygonToNode(polygon_id) {
+  const nodeSelect = document.getElementById(`node-select-${polygon_id}`);
+  const device_id = nodeSelect.value;
+  // Récupérer le polygone depuis la variable globale
+  const geofences = window.globalGeofences || [];
+  const polygon = geofences.find(g => g.polygon_id == polygon_id);
+  if (!polygon) {
+    alert("Polygone non trouvé dans la liste.");
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/API/save-geofencing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: polygon.name,
+        geometry: polygon.geometry,
+        nodes: [device_id] // On assigne ce polygone à ce node
+      }),
+    });
+    const result = await response.json();
+    if (response.ok) {
+      alert(result.message);
+      if (typeof fetchPolygons === 'function') {
+        fetchPolygons();
+      }
+    } else {
+      alert(result.message);
+    }
+  } catch (error) {
+    console.error("Erreur lors de l'assignation du polygone :", error);
+    alert("Erreur lors de l'assignation du polygone.");
+  }
+}
+
 
 /* ---------------------------------------------------------------------
    GESTION DU POLYGONE POUR LA PAGE draw_geofencing.html
