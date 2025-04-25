@@ -252,3 +252,93 @@ async function assignPolygonToNode(polygon_id) {
     alert("Erreur lors de l'assignation du polygone.");
   }
 }
+
+
+/* ---------------------------------------------------------------------
+   GESTION DU POLYGONE POUR LA PAGE draw_geofencing.html
+   (Utilisé pour tracer un polygone et l'envoyer de manière segmentée)
+--------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('geofencing-map')) {
+    const map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+    
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    
+    const drawControl = new L.Control.Draw({
+      edit: { featureGroup: drawnItems },
+      draw: {
+        polygon: true,
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+      },
+    });
+    map.addControl(drawControl);
+    
+    let drawnPolygon = null;
+    map.on(L.Draw.Event.CREATED, function (event) {
+      drawnItems.clearLayers();
+      drawnPolygon = event.layer;
+      drawnItems.addLayer(drawnPolygon);
+    });
+    
+    // Charger les nodes pour remplir le select de la page draw_geofencing
+	async function loadNodes() {
+	  try {
+		const nodes = await fetchData(API_BASE_URL + '/API/get-nodes');
+		console.log("Nodes récupérés :", nodes);
+		const nodeSelectElem = document.getElementById('node-select');
+		if (nodeSelectElem) {
+		  nodeSelectElem.innerHTML = "";
+		  nodes.forEach(node => {
+			const option = document.createElement('option');
+			// Utiliser node.device_id comme valeur
+			option.value = node.device_id;
+			// Afficher "name (device_id)" par exemple
+			option.text = `${node.name || node.nom || node.device_id} (${node.device_id})`;
+			nodeSelectElem.appendChild(option);
+		  });
+		} else {
+		  console.warn("L'élément #node-select est introuvable sur la page draw_geofencing.");
+		}
+	  } catch (error) {
+		console.error("Erreur lors du chargement des nodes :", error);
+	  }
+	}
+
+    // Charger dès l'initialisation de draw_geofencing
+    loadNodes();
+    
+    document.getElementById('save-polygon').addEventListener('click', () => {
+      const polygonName = document.getElementById('polygon-name').value;
+      const nodeSelect = document.getElementById('node-select');
+      // Récupération des device_id sélectionnés
+      const selectedNodes = Array.from(nodeSelect.selectedOptions).map(option => option.value);
+      
+      if (drawnPolygon && polygonName && selectedNodes.length > 0) {
+        const polygonData = {
+          name: polygonName,
+          geometry: drawnPolygon.toGeoJSON().geometry,
+          active: false,
+          nodes: selectedNodes  // Pour la segmentation downlink
+        };
+        console.log("Envoi du polygone avec nodes:", polygonData);
+        fetchData(API_BASE_URL + '/API/save-geofencing', 'POST', polygonData)
+          .then(response => {
+            console.log('Réponse du backend:', response);
+            response ? alert('Polygone enregistré avec succès!') : alert('Insertion réussie sans retour de données.');
+          })
+          .catch(error => {
+            console.error("Erreur lors de l'enregistrement du polygone:", error);
+          });
+      } else {
+        alert('Veuillez tracer un polygone, entrer un nom et sélectionner au moins un node.');
+      }
+    });
+  }
+});
