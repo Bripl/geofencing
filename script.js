@@ -382,4 +382,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+/* ===============================
+   SECTION : Page add-device.html
+   (Création de nouveaux devices)
+============================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Vérifier si le formulaire d'ajout de device existe (cas de add-device.html)
+  const deviceForm = document.getElementById('device-form');
+  if (deviceForm) {
+    deviceForm.addEventListener('submit', async (e) => {
+      e.preventDefault(); // Empêche le rechargement de la page
+      // Récupérer les valeurs des inputs
+      const deviceId = document.getElementById('device_id').value.trim();
+      const name = document.getElementById('name').value.trim();
+      
+      // Vérification simple
+      if (!deviceId || !name) {
+        document.getElementById('result').textContent = "Veuillez remplir tous les champs.";
+        return;
+      }
+
+      try {
+        // Appel POST vers l'endpoint pour ajouter un device
+        const response = await fetch(API_BASE_URL + '/API/add-device', {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ device_id: deviceId, name: name })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          document.getElementById('result').textContent = result.message;
+          // Optionnel : vider le formulaire
+          deviceForm.reset();
+        } else {
+          document.getElementById('result').textContent = "Erreur : " + result.message;
+        }
+      } catch (error) {
+        console.error("Erreur lors de l'ajout du device :", error);
+        document.getElementById('result').textContent = "Erreur lors de l'ajout du device : " + error.message;
+      }
+    });
+  }
+});
 
