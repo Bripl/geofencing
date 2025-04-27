@@ -10,7 +10,6 @@
     nav a { margin-right: 1em; }
     #geofencing-map { height: 600px; margin-top: 1em; }
     label { display: block; margin-top: 1em; }
-    select { margin-top: 0.5em; padding: 0.5em; width: 100%; }
   </style>
 </head>
 <body>
@@ -26,12 +25,6 @@
   <label for="polygon-name">Nom du polygone :</label>
   <input type="text" id="polygon-name" name="polygon-name" />
 
-  <!-- Nouvel élément select pour choisir le(s) node(s) -->
-  <label for="node-select">Sélectionner le(s) node(s) :</label>
-  <select id="node-select" name="node-select" multiple>
-    <!-- Les options seront ajoutées dynamiquement via JavaScript -->
-  </select>
-
   <button id="save-polygon">Enregistrer le polygone</button>
 
   <!-- Carte -->
@@ -39,7 +32,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-  <!-- Inclure ensuite votre script.js -->
+  <!-- Votre script.js gérera le dessin et l'enregistrement (via l'endpoint /API/create-geofence) -->
   <script src="script.js"></script>
 </body>
 </html>
