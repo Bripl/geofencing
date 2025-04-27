@@ -75,8 +75,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function fetchPolygons() {
       try {
-        const geofences = await fetchData(API_BASE_URL + '/API/get-geofences');
+        // Récupérer la liste de tous les polygones
+        let geofences = await fetchData(API_BASE_URL + '/API/get-geofences');
         console.log("Polygones reçus:", geofences);
+        
+        // Pour chaque polygone, vérifier s'il a au moins une assignation
+        // en appelant l'endpoint get-polygon-assignments
+        geofences = await Promise.all(
+          geofences.map(async (geofence) => {
+            const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${geofence.polygon_id}`);
+            // Attribuer true s'il y a au moins une assignation, false sinon
+            geofence.assigned = (assignments && assignments.length > 0);
+            return geofence;
+          })
+        );
+        
         window.globalGeofences = geofences;
         
         // Purger les anciennes couches (mais pas le tileLayer)
@@ -90,12 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
           attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
         
-        // Effacer le contenu de la sidebar et ajouter un titre
+        // Effacer le contenu de la sidebar et y ajouter un titre
         sidebar.innerHTML = "<h3>Polygones</h3>";
         
-        // Pour chaque polygone, ajouter un élément dans la sidebar et un calque sur la carte
+        // Pour chaque polygone, ajouter un élément dans la sidebar et un calque sur la carte.
         geofences.forEach(geofence => {
-          // Création d'un élément pour la liste des polygones
+          // La couleur de base dépend du statut assigné :
+          // - Rouge si assigné (au moins une assignation)
+          // - Vert sinon.
+          const baseColor = geofence.assigned ? 'red' : 'green';
+          
+          // Création d'un élément pour la liste dans la sidebar
           const pItem = document.createElement('div');
           pItem.style.cursor = 'pointer';
           pItem.style.marginBottom = '5px';
@@ -105,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Création du calque sur la carte
           const leafletCoordinates = geofence.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
-          const polygonLayer = L.polygon(leafletCoordinates, { color: geofence.active ? 'green' : 'red' });
+          const polygonLayer = L.polygon(leafletCoordinates, { color: baseColor });
           polygonLayer.addTo(map);
           geofence.layer = polygonLayer;
           polygonLayer.on('click', () => selectPolygon(geofence, map, sidebar));
@@ -116,7 +134,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function selectPolygon(geofence, map, sidebar) {
-      // Supprimer la zone d'assignation existante (si présente)
+      // Réinitialiser la couleur de tous les polygones en fonction de leur statut assigné
+      window.globalGeofences.forEach(g => {
+        if (g.layer) {
+          const color = g.assigned ? 'red' : 'green';
+          g.layer.setStyle({ color: color });
+        }
+      });
+      
+      // Mettre en surbrillance le polygone sélectionné en bleu
+      if (geofence.layer) {
+        geofence.layer.setStyle({ color: "blue" });
+      }
+      
+      // Créer ou rafraîchir la zone d'assignation dans la sidebar
       let assignSection = document.getElementById('assignSection');
       if (assignSection) {
         assignSection.remove();
@@ -127,19 +158,38 @@ document.addEventListener('DOMContentLoaded', () => {
       assignSection.innerHTML = `<h3>Polygone: ${geofence.name} (ID: ${geofence.polygon_id})</h3>`;
       
       try {
+        // Récupérer les assignations pour ce polygone
         const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${geofence.polygon_id}`);
+        // Récupérer la liste complète des nodes
         const nodes = await fetchData(`${API_BASE_URL}/API/get-nodes`);
-        const assignedNodes = nodes.filter(n => assignments.find(a => a.device_id === n.device_id));
-        const unassignedNodes = nodes.filter(n => !assignments.find(a => a.device_id === n.device_id));
         
-        // Afficher les nodes assignés
+        // Section assignées
         let assignedDiv = document.createElement('div');
         assignedDiv.innerHTML = "<h4>Nodes assignés</h4>";
-        if (assignedNodes.length > 0) {
+        if (assignments && assignments.length > 0) {
           const ulAssigned = document.createElement('ul');
-          assignedNodes.forEach(node => {
+          assignments.forEach(assignment => {
+            // Chercher les infos complémentaires sur le node
+            const nodeInfo = nodes.find(n => n.device_id === assignment.device_id) || {};
             const li = document.createElement('li');
-            li.textContent = node.name || node.device_id;
+            li.innerHTML = `
+              Device: ${nodeInfo.name || assignment.device_id} - Actif: ${assignment.active ? 'Oui' : 'Non'}
+              <br>
+              <select id="activation-hour-${assignment.device_id}-${geofence.polygon_id}">
+                ${Array.from({ length: 49 }, (_, i) => {
+                  if (i === 48) return `<option value="${i}">Immédiat</option>`;
+                  const hours = Math.floor(i / 2);
+                  const minutes = (i % 2) * 30;
+                  return `<option value="${i}">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}</option>`;
+                }).join('')}
+              </select>
+              <button onclick="updateAssignmentWithHour('${assignment.device_id}', ${geofence.polygon_id}, ${assignment.active ? 2 : 1})">
+                ${assignment.active ? 'Désactiver' : 'Activer'}
+              </button>
+              <button onclick="updateAssignmentWithHour('${assignment.device_id}', ${geofence.polygon_id}, 3)">
+                Supprimer
+              </button>
+            `;
             ulAssigned.appendChild(li);
           });
           assignedDiv.appendChild(ulAssigned);
@@ -148,9 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         assignSection.appendChild(assignedDiv);
         
-        // Afficher les nodes disponibles avec multi-sélection
+        // Section nodes disponibles (non assignées)
         let availableDiv = document.createElement('div');
         availableDiv.innerHTML = "<h4>Nodes disponibles</h4>";
+        const unassignedNodes = nodes.filter(n => !assignments || !assignments.find(a => a.device_id === n.device_id));
         if (unassignedNodes.length > 0) {
           const form = document.createElement('form');
           unassignedNodes.forEach(node => {
@@ -181,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
               }
             }
-            // Rafraîchir la zone d'assignation une fois les assignations mises à jour
+            // Rafraîchir la zone d'assignation après modifications
             selectPolygon(geofence, map, sidebar);
           });
           form.appendChild(btnAssign);
@@ -190,14 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
           availableDiv.innerHTML += "<p>Tous les nodes sont assignés</p>";
         }
         assignSection.appendChild(availableDiv);
-        
-        // Ajouter assignSection à la fin de la sidebar
+        // Ajouter (ou remplacer) la zone d'assignation dans la sidebar
         sidebar.appendChild(assignSection);
-        
-        // Mettre en surbrillance le polygone sélectionné (par exemple, couleur bleue)
-        if (geofence.layer) {
-          geofence.layer.setStyle({ color: "blue" });
-        }
       } catch (err) {
         console.error("Erreur dans selectPolygon :", err);
       }
