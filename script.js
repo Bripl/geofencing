@@ -59,7 +59,7 @@ window.updateAssignmentWithHour = updateAssignmentWithHour;
    SECTION : Page manage_geofencing.html
 =============================== */
 document.addEventListener('DOMContentLoaded', () => {
-  // Vérifier que les conteneurs 'map-container' et 'sidebar' existent
+  // Vérifier que les conteneurs "map-container" et "sidebar" existent.
   if (document.getElementById('map-container') && document.getElementById('sidebar')) {
     // Initialiser la carte dans le conteneur "map-container"
     const map = L.map('map-container').setView([48.8566, 2.3522], 13);
@@ -67,257 +67,256 @@ document.addEventListener('DOMContentLoaded', () => {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Référence de la sidebar
+    // Référence à la sidebar
     const sidebar = document.getElementById('sidebar');
 
-    // Variables globales pour stocker les données
-    window.globalGeofences = [];   // polygones (geofences)
-    window.globalNodes = [];       // liste des nodes
-    window.globalAssignments = []; // assignments au format { polygon_id, device_id, active }
+    // Variables globales
+    window.globalGeofences = [];   // Contiendra les objets de la table geofences
+    window.globalNodes = [];       // Contiendra les objets de la table nodes
+    window.globalAssignments = []; // Contiendra les lignes d'assignation sous forme { polygon_id, device_id, active }
 
-    // --- Fonctions de récupération des données ---
+    // --- Récupération des données ---
 
+    // Récupère les polygones et pour chacun, leurs assignations.
     async function fetchAllPolygons() {
       try {
         let polys = await fetchData(API_BASE_URL + '/API/get-geofences');
-        // Pour chaque polygone, on récupère ses assignations et on note s'il est assigné
-        polys = await Promise.all(
-          polys.map(async (poly) => {
-            try {
-              let assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${poly.polygon_id}`);
-              poly.assigned = (assignments && assignments.length > 0);
-              if (assignments && assignments.length > 0) {
-                assignments.forEach(a => {
-                  window.globalAssignments.push({
-                    polygon_id: poly.polygon_id,
-                    device_id: a.device_id,
-                    active: a.active
-                  });
+        // Pour chaque polygone, récupérer ses assignations et déterminer s'il est assigné.
+        polys = await Promise.all(polys.map(async (poly) => {
+          try {
+            const assignments = await fetchData(`${API_BASE_URL}/API/get-polygon-assignments?polygon_id=${poly.polygon_id}`);
+            poly.assigned = (assignments && assignments.length > 0);
+            if (assignments && assignments.length > 0) {
+              assignments.forEach(a => {
+                window.globalAssignments.push({
+                  polygon_id: poly.polygon_id,
+                  device_id: a.device_id,
+                  active: a.active
                 });
-              }
-            } catch (e) {
-              poly.assigned = false;
+              });
             }
-            return poly;
-          })
-        );
+          } catch (e) {
+            poly.assigned = false;
+          }
+          return poly;
+        }));
         window.globalGeofences = polys;
       } catch (e) {
-        console.error("Erreur dans fetchAllPolygons : ", e);
+        console.error("Erreur dans fetchAllPolygons:", e);
       }
     }
 
+    // Récupère la liste complète des nodes.
     async function fetchAllNodes() {
       try {
         const nodes = await fetchData(API_BASE_URL + '/API/get-nodes');
         window.globalNodes = nodes;
       } catch (e) {
-        console.error("Erreur dans fetchAllNodes : ", e);
+        console.error("Erreur dans fetchAllNodes:", e);
       }
     }
 
-    // --- Fonctions de rendu dans la sidebar ---
+    // --- Création des éléments sur la carte ---
 
-    // Afficher la liste des polygones avec leur couleur de base
-    function renderPolygonList(map, sidebar) {
-      let polygonListDiv = document.getElementById('polygonList');
-      if (!polygonListDiv) {
-        polygonListDiv = document.createElement('div');
-        polygonListDiv.id = 'polygonList';
-        polygonListDiv.innerHTML = "<h3>Polygones</h3>";
-        sidebar.appendChild(polygonListDiv);
-      } else {
-        polygonListDiv.innerHTML = "<h3>Polygones</h3>";
+    // Crée et ajoute un calque pour chaque polygone sur la carte.
+    function createPolygonLayers() {
+      window.globalGeofences.forEach(poly => {
+        const coords = poly.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
+        // Couleur de base : rouge s'il est assigné, vert sinon.
+        const baseColor = poly.assigned ? 'red' : 'green';
+        const layer = L.polygon(coords, { color: baseColor }).addTo(map);
+        poly.layer = layer;
+        // Quand on clique directement sur le calque, on appelle selectPolygon.
+        layer.on('click', () => selectPolygon(poly));
+      });
+    }
+
+    // --- Rendu dans la sidebar ---
+
+    // Affiche la liste des polygones dans la sidebar.
+    function renderPolygonList() {
+      let polyListDiv = document.getElementById('polygonList');
+      if (!polyListDiv) {
+        polyListDiv = document.createElement('div');
+        polyListDiv.id = 'polygonList';
+        sidebar.appendChild(polyListDiv);
       }
-
+      polyListDiv.innerHTML = "<h3>Polygones</h3>";
       window.globalGeofences.forEach(poly => {
         const div = document.createElement('div');
         div.style.cursor = 'pointer';
         div.style.marginBottom = '5px';
-        // Couleur de base : rouge si assigné, vert sinon
+        // Appliquer la couleur de base au texte.
         const baseColor = poly.assigned ? 'red' : 'green';
         div.style.color = baseColor;
         div.textContent = `${poly.name} (ID: ${poly.polygon_id})`;
-        div.addEventListener('click', () => selectPolygon(poly, map, sidebar));
-        polygonListDiv.appendChild(div);
+        div.addEventListener('click', () => selectPolygon(poly));
+        polyListDiv.appendChild(div);
       });
     }
 
-    // Afficher la liste complète des nodes
-    function renderNodeList(sidebar) {
+    // Affiche la liste complète des nodes dans la sidebar.
+    function renderNodeList() {
       let nodeListDiv = document.getElementById('nodeList');
       if (!nodeListDiv) {
         nodeListDiv = document.createElement('div');
         nodeListDiv.id = 'nodeList';
-        nodeListDiv.innerHTML = "<h3>Nodes</h3>";
         sidebar.appendChild(nodeListDiv);
-      } else {
-        nodeListDiv.innerHTML = "<h3>Nodes</h3>";
       }
+      nodeListDiv.innerHTML = "<h3>Nodes</h3>";
       window.globalNodes.forEach(node => {
         const div = document.createElement('div');
         div.style.cursor = 'pointer';
         div.style.marginBottom = '5px';
         div.textContent = node.name || node.device_id;
-        div.addEventListener('click', () => selectNode(node, map, sidebar));
+        // Au clic sur un node, on passe en mode "node selection"
+        div.addEventListener('click', () => selectNode(node));
         nodeListDiv.appendChild(div);
       });
     }
 
-    // --- Fonctions de sélection ---
-
-    // Lorsqu'on sélectionne un polygone
-    async function selectPolygon(poly, map, sidebar) {
-      // Réinitialiser la couleur de tous les polygones en fonction de leur statut de base
-      window.globalGeofences.forEach(g => {
-        if (g.layer) {
-          const baseColor = g.assigned ? 'red' : 'green';
-          g.layer.setStyle({ color: baseColor });
-        }
-      });
-      // Mettre en surbrillance le polygone sélectionné en bleu
-      if (poly.layer) {
-        poly.layer.setStyle({ color: 'blue' });
-      }
-
-      // Créer ou renouveler la zone d'assignation pour le polygone
-      let assignSection = document.getElementById('assignSection');
-      if (assignSection) assignSection.remove();
-      assignSection = document.createElement('div');
-      assignSection.id = 'assignSection';
-      assignSection.style.marginTop = '20px';
-      assignSection.innerHTML = `<h3>Polygone: ${poly.name} (ID: ${poly.polygon_id})</h3>`;
-
-      // Utiliser globalAssignments pour récupérer les assignations du polygone
-      const assignmentsForPoly = window.globalAssignments.filter(a => a.polygon_id === poly.polygon_id);
-      let assignedDiv = document.createElement('div');
-      assignedDiv.innerHTML = "<h4>Nodes assignés</h4>";
-      if (assignmentsForPoly.length > 0) {
-        let ul = "<ul>";
-        assignmentsForPoly.forEach(a => {
-          const nodeInfo = window.globalNodes.find(n => n.device_id === a.device_id) || {};
-          ul += `<li>Device: ${nodeInfo.name || a.device_id} - Actif: ${a.active ? 'Oui' : 'Non'} 
-                   [<select id="activation-hour-${a.device_id}-${poly.polygon_id}">
-                      ${Array.from({ length: 49 }, (_, i) => {
-                        if (i === 48) return `<option value="${i}">Immédiat</option>`;
-                        const hours = Math.floor(i / 2);
-                        const minutes = (i % 2) * 30;
-                        return `<option value="${i}">${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}</option>`;
-                      }).join('')}
-                   </select>
-                   <button onclick="updateAssignmentWithHour('${a.device_id}', ${poly.polygon_id}, ${a.active ? 2 : 1})"> ${a.active ? 'Désactiver' : 'Activer'} </button>
-                   <button onclick="updateAssignmentWithHour('${a.device_id}', ${poly.polygon_id}, 3)">Supprimer</button>]
-                 </li>`;
-        });
-        ul += "</ul>";
-        assignedDiv.innerHTML += ul;
-      } else {
-        assignedDiv.innerHTML += "<p>Aucune assignation</p>";
-      }
-      assignSection.appendChild(assignedDiv);
-
-      // Pour les nodes disponibles, filtrer ceux sans assignation pour ce polygone
-      const availableNodes = window.globalNodes.filter(n =>
-        !window.globalAssignments.find(a => a.device_id === n.device_id && a.polygon_id === poly.polygon_id)
-      );
-      let availableDiv = document.createElement('div');
-      availableDiv.innerHTML = "<h4>Nodes disponibles</h4>";
-      if (availableNodes.length > 0) {
-        let form = document.createElement('form');
-        availableNodes.forEach(n => {
-          const label = document.createElement('label');
-          label.style.display = "block";
-          const checkbox = document.createElement('input');
-          checkbox.type = "checkbox";
-          checkbox.value = n.device_id;
-          label.appendChild(checkbox);
-          label.append(" " + (n.name || n.device_id));
-          form.appendChild(label);
-        });
-        const btnAssign = document.createElement('button');
-        btnAssign.type = "button";
-        btnAssign.textContent = "Assigner les nodes sélectionnés";
-        btnAssign.addEventListener('click', async () => {
-          const selected = Array.from(form.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
-          for (const d_id of selected) {
-            try {
-              const resp = await fetch(`${API_BASE_URL}/API/assign-geofence`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ polygon_id: poly.polygon_id, device_id: d_id })
-              });
-              const resJson = await resp.json();
-              console.log(resJson.message);
-            } catch (err) {
-              console.error(err);
-            }
-          }
-          // Après assignation, recharger cette section
-          selectPolygon(poly, map, sidebar);
-        });
-        form.appendChild(btnAssign);
-        availableDiv.appendChild(form);
-      } else {
-        availableDiv.innerHTML += "<p>Tous les nodes sont assignés</p>";
-      }
-      assignSection.appendChild(availableDiv);
-      // Ajouter la section d'assignation à la sidebar
-      let existingSection = document.getElementById('assignSection');
-      if (existingSection) existingSection.remove();
-      sidebar.appendChild(assignSection);
-    }
-
-    // Lorsqu'on sélectionne un node depuis la liste des nodes dans la sidebar
-    async function selectNode(node, map, sidebar) {
-      // Réinitialiser les couleurs pour tous les polygones
+    // Réinitialise la couleur de tous les polygones à leur couleur de base.
+    function resetAllPolygonColors() {
       window.globalGeofences.forEach(poly => {
         if (poly.layer) {
           const baseColor = poly.assigned ? 'red' : 'green';
           poly.layer.setStyle({ color: baseColor });
         }
       });
-      // Filtrer les assignations pour ce node
-      const nodeAssignments = window.globalAssignments.filter(a => a.device_id === node.device_id);
-      const assignedPolygonIds = nodeAssignments.map(a => a.polygon_id);
-      // Mettre en surbrillance en bleu les polygones assignés à ce node
+    }
+
+    // --- Sélection / Interaction ---
+
+    // Lorsqu'un polygone est sélectionné :
+    // - Réinitialiser la couleur des autres polygones.
+    // - Mettre le polygone sélectionné en bleu.
+    // - Afficher une section d’assignation (avec la liste des assignations et la possibilité d’assigner de nouveaux nodes).
+    async function selectPolygon(poly) {
+      resetAllPolygonColors();
+      if (poly.layer) {
+        poly.layer.setStyle({ color: 'blue' });
+      }
+      // Supprimer la section d'assignation précédente, le cas échéant.
+      const previousAssignSection = document.getElementById('assignSection');
+      if (previousAssignSection) previousAssignSection.remove();
+
+      const assignSection = document.createElement('div');
+      assignSection.id = 'assignSection';
+      assignSection.style.marginTop = '20px';
+      assignSection.innerHTML = `<h3>Polygone: ${poly.name} (ID: ${poly.polygon_id})</h3>`;
+
+      try {
+        // Utiliser window.globalAssignments pour obtenir les assignations du polygone.
+        const assignmentsForPoly = window.globalAssignments.filter(a => a.polygon_id === poly.polygon_id);
+        let assignedDiv = document.createElement('div');
+        assignedDiv.innerHTML = "<h4>Nodes assignés</h4>";
+        if (assignmentsForPoly.length > 0) {
+          const ul = document.createElement('ul');
+          assignmentsForPoly.forEach(a => {
+            const nodeInfo = window.globalNodes.find(n => n.device_id === a.device_id) || {};
+            const li = document.createElement('li');
+            li.innerHTML = `
+              Device: ${nodeInfo.name || a.device_id} - Actif: ${a.active ? 'Oui' : 'Non'}
+              <br>
+              <select id="activation-hour-${a.device_id}-${poly.polygon_id}">
+                ${Array.from({ length: 49 }, (_, i) => {
+                  if (i === 48) return `<option value="${i}">Immédiat</option>`;
+                  const hours = Math.floor(i / 2);
+                  const minutes = (i % 2) * 30;
+                  return `<option value="${i}">${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}</option>`;
+                }).join('')}
+              </select>
+              <button onclick="updateAssignmentWithHour('${a.device_id}', ${poly.polygon_id}, ${a.active ? 2 : 1})">
+                ${a.active ? 'Désactiver' : 'Activer'}
+              </button>
+              <button onclick="updateAssignmentWithHour('${a.device_id}', ${poly.polygon_id}, 3)">Supprimer</button>
+            `;
+            ul.appendChild(li);
+          });
+          assignedDiv.appendChild(ul);
+        } else {
+          assignedDiv.innerHTML += "<p>Aucune assignation</p>";
+        }
+        assignSection.appendChild(assignedDiv);
+
+        // Section pour assigner de nouveaux nodes.
+        let availableDiv = document.createElement('div');
+        availableDiv.innerHTML = "<h4>Nodes disponibles</h4>";
+        const availableNodes = window.globalNodes.filter(n =>
+          !window.globalAssignments.find(a => a.device_id === n.device_id && a.polygon_id === poly.polygon_id)
+        );
+        if (availableNodes.length > 0) {
+          const form = document.createElement('form');
+          availableNodes.forEach(n => {
+            const label = document.createElement('label');
+            label.style.display = "block";
+            const checkbox = document.createElement('input');
+            checkbox.type = "checkbox";
+            checkbox.value = n.device_id;
+            label.appendChild(checkbox);
+            label.append(" " + (n.name || n.device_id));
+            form.appendChild(label);
+          });
+          const btnAssign = document.createElement('button');
+          btnAssign.type = "button";
+          btnAssign.textContent = "Assigner les nodes sélectionnés";
+          btnAssign.addEventListener('click', async () => {
+            const selected = Array.from(form.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+            for (const d_id of selected) {
+              try {
+                const resp = await fetch(`${API_BASE_URL}/API/assign-geofence`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ polygon_id: poly.polygon_id, device_id: d_id })
+                });
+                const resJson = await resp.json();
+                console.log(resJson.message);
+                // Optionnel : mettre à jour globalAssignments localement si besoin.
+              } catch (err) {
+                console.error(err);
+              }
+            }
+            // Après assignation, rafraîchir la section d'assignation.
+            selectPolygon(poly);
+          });
+          form.appendChild(btnAssign);
+          availableDiv.appendChild(form);
+        } else {
+          availableDiv.innerHTML += "<p>Tous les nodes sont assignés</p>";
+        }
+        assignSection.appendChild(availableDiv);
+
+        sidebar.appendChild(assignSection);
+      } catch (err) {
+        console.error("Erreur dans selectPolygon :", err);
+      }
+    }
+
+    // Lorsqu'un node est cliqué dans la liste des nodes, on met en surbrillance simplement ses polygones assignés (sans ajouter de section dans la sidebar).
+    function selectNode(node) {
+      resetAllPolygonColors();
+      const assignedPolyIds = window.globalAssignments
+        .filter(a => a.device_id === node.device_id)
+        .map(a => a.polygon_id);
       window.globalGeofences.forEach(poly => {
-        if (assignedPolygonIds.includes(poly.polygon_id) && poly.layer) {
+        if (assignedPolyIds.includes(poly.polygon_id) && poly.layer) {
           poly.layer.setStyle({ color: 'blue' });
         }
       });
-      
-      // Construire une section d'affichage pour les assignations du node
-      let nodeAssignSection = document.getElementById('nodeAssignSection');
-      if (nodeAssignSection) nodeAssignSection.remove();
-      nodeAssignSection = document.createElement('div');
-      nodeAssignSection.id = 'nodeAssignSection';
-      nodeAssignSection.style.marginTop = '20px';
-      nodeAssignSection.innerHTML = `<h3>Assignations pour le node: ${node.name || node.device_id}</h3>`;
-      
-      if (nodeAssignments && nodeAssignments.length > 0) {
-        let html = "<ul>";
-        nodeAssignments.forEach(a => {
-          html += `<li>Polygone ID: ${a.polygon_id} - Actif: ${a.active ? 'Oui' : 'Non'}</li>`;
-        });
-        html += "</ul>";
-        nodeAssignSection.innerHTML += html;
-      } else {
-        nodeAssignSection.innerHTML += "<p>Ce node n'a aucune assignation.</p>";
-      }
-      sidebar.appendChild(nodeAssignSection);
+      // Nous ne modifions pas la sidebar dans ce mode.
     }
 
-    // Fonction d'initialisation globale
+    // Fonction d'initialisation globale.
     async function init() {
       await fetchAllNodes();
       await fetchAllPolygons();
-      // Afficher la liste des polygones et des nodes.
-      renderPolygonList(map, sidebar);
-      renderNodeList(sidebar);
+      createPolygonLayers();
+      renderPolygonList();
+      renderNodeList();
     }
     init();
-    
-    // Exposer quelques fonctions globales si besoin.
+
+    // Exposer globalement certaines fonctions si nécessaire.
     window.fetchPolygons = fetchAllPolygons;
     window.fetchNodes = fetchAllNodes;
   }
