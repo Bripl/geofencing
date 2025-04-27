@@ -59,8 +59,8 @@ window.updateAssignmentWithHour = updateAssignmentWithHour;
    SECTION : Page manage_geofencing.html
 =============================== */
 document.addEventListener('DOMContentLoaded', () => {
-  // S'assurer que nous sommes sur la page manage
-  if (document.getElementById('container')) {
+  // On vérifie que les éléments 'map-container' et 'sidebar' existent bien
+  if (document.getElementById('map-container') && document.getElementById('sidebar')) {
     // Initialiser la carte dans le conteneur.
     const map = L.map('map-container').setView([48.8566, 2.3522], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Référence de la sidebar
     const sidebar = document.getElementById('sidebar');
     
-    // Stocker les polygones globalement
+    // Stocker globalement les polygones
     window.globalGeofences = [];
     
     async function fetchPolygons() {
@@ -90,12 +90,12 @@ document.addEventListener('DOMContentLoaded', () => {
           attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
         
-        // Effacer le contenu de la sidebar si nécessaire
+        // Effacer le contenu de la sidebar et ajouter un titre
         sidebar.innerHTML = "<h3>Polygones</h3>";
         
-        // Préparer la liste des polygones dans le sidebar
+        // Pour chaque polygone, ajouter un élément dans la sidebar et un calque sur la carte
         geofences.forEach(geofence => {
-          // Création d'un élément pour le polygone
+          // Création d'un élément pour la liste des polygones
           const pItem = document.createElement('div');
           pItem.style.cursor = 'pointer';
           pItem.style.marginBottom = '5px';
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function selectPolygon(geofence, map, sidebar) {
-      // Réinitialiser la zone d'assignation (par exemple en ajoutant un bloc spécifique dans la sidebar)
+      // Supprimer la zone d'assignation existante (si présente)
       let assignSection = document.getElementById('assignSection');
       if (assignSection) {
         assignSection.remove();
@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const assignedNodes = nodes.filter(n => assignments.find(a => a.device_id === n.device_id));
         const unassignedNodes = nodes.filter(n => !assignments.find(a => a.device_id === n.device_id));
         
+        // Afficher les nodes assignés
         let assignedDiv = document.createElement('div');
         assignedDiv.innerHTML = "<h4>Nodes assignés</h4>";
         if (assignedNodes.length > 0) {
@@ -147,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         assignSection.appendChild(assignedDiv);
         
+        // Afficher les nodes disponibles avec multi-sélection
         let availableDiv = document.createElement('div');
         availableDiv.innerHTML = "<h4>Nodes disponibles</h4>";
         if (unassignedNodes.length > 0) {
@@ -179,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
               }
             }
-            // Mise à jour de la section après assignation
+            // Rafraîchir la zone d'assignation une fois les assignations mises à jour
             selectPolygon(geofence, map, sidebar);
           });
           form.appendChild(btnAssign);
@@ -188,9 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
           availableDiv.innerHTML += "<p>Tous les nodes sont assignés</p>";
         }
         assignSection.appendChild(availableDiv);
+        
+        // Ajouter assignSection à la fin de la sidebar
         sidebar.appendChild(assignSection);
         
-        // Optionnel : modifier la couleur du polygone sélectionné sur la carte
+        // Mettre en surbrillance le polygone sélectionné (par exemple, couleur bleue)
         if (geofence.layer) {
           geofence.layer.setStyle({ color: "blue" });
         }
@@ -201,8 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     fetchPolygons();
     window.fetchPolygons = fetchPolygons;
-    
-    // Vous pouvez ajouter ici la liste des nodes pour afficher leurs assignations.
   }
 });
 
