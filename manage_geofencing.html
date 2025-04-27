@@ -5,24 +5,47 @@
   <title>Gérer les polygones</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 2em; }
-    nav a { margin-right: 1em; }
-    #manage-geofencing-map { height: 600px; margin-top: 1em; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+    /* Sidebar pour la liste et la gestion */
+    #sidebar {
+      width: 30%;
+      padding: 10px;
+      overflow-y: auto;
+      border-right: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    /* Conteneur pour la carte */
+    #map-container {
+      flex: 1;
+      height: 100%;
+    }
+    nav {
+      margin-bottom: 1em;
+    }
+    nav a {
+      margin-right: 1em;
+      text-decoration: none;
+      color: #333;
+    }
   </style>
 </head>
 <body>
-  <h1>Gérer les polygones</h1>
-  <nav>
-    <a href="index.html">Accueil</a>
-    <a href="draw_geofencing.html">Tracer des polygones</a>
-    <a href="show_gps_points.html">Afficher les points GPS</a>
-    <a href="add-device.html">Ajouter un node</a>
-  </nav>
+  <!-- Sidebar à gauche -->
+  <div id="sidebar">
+    <h2>Gérer les polygones</h2>
+    <!-- La liste des polygones et leurs assignations sera injectée ici via script.js -->
+  </div>
+  <!-- Conteneur de la carte à droite -->
+  <div id="map-container"></div>
 
-  <!-- Carte pour la gestion des polygones -->
-  <div id="manage-geofencing-map"></div>
-
+  <!-- Inclusion de Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Inclusion de votre script -->
   <script src="script.js"></script>
 </body>
 </html>
