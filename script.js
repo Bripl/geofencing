@@ -23,9 +23,8 @@ async function fetchData(url, method = 'GET', body = null) {
   return null;
 }
 
-
 /* 
-Fonction pour mettre à jour une assignation.
+Fonction de mise à jour d'une assignation (pour les actions sur un device déjà assigné)
 Actions : 1 = activer, 2 = désactiver, 3 = supprimer.
 */
 async function updateAssignmentWithHour(device_id, polygon_id, action) {
@@ -34,7 +33,7 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
   console.log(`updateAssignmentWithHour appelée avec device_id=${device_id}, polygon_id=${polygon_id}, action=${action}, heure=${selectedHour}`);
   
   const payload = {
-    action,    // 1 = activer, 2 = désactiver, 3 = supprimer
+    action,         // 1 = activer, 2 = désactiver, 3 = supprimer
     polygon_id,
     hour: selectedHour,
     device_id,
@@ -48,13 +47,13 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
     });
     const result = await response.json();
     console.log('Réponse de mise à jour avec heure :', result);
+    
     let actionText;
     if (action === 1) actionText = 'Activer';
     else if (action === 2) actionText = 'Désactiver';
     else if (action === 3) actionText = 'Supprimer';
     
     alert(`Action envoyée avec succès : ${actionText}, Heure : ${selectedHour === 48 ? 'Immédiate' : selectedHour}`);
-    // Laisser le popup affiché pour permettre de continuer à gérer les assignations.
   } catch (error) {
     console.error('Erreur lors de la mise à jour de l\'assignation avec heure :', error);
     alert('Erreur lors de la mise à jour.');
@@ -62,45 +61,45 @@ async function updateAssignmentWithHour(device_id, polygon_id, action) {
 }
 window.updateAssignmentWithHour = updateAssignmentWithHour;
 
-/* ---------------------------------------------------------------------
-   GESTION DES POLYGONES POUR LA PAGE manage-geofencing.html
---------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------
+   SECTION : Gestion des polygones dans manage_geofencing.html
+--------------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
+  // Si nous sommes sur la page de gestion (existe un élément avec id 'manage-geofencing-map')
   if (document.getElementById('manage-geofencing-map')) {
     const map = L.map('manage-geofencing-map').setView([48.8566, 2.3522], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
-
-    // Stocker globalement les polygones récupérés pour usage ultérieur
+    
+    // Stocker globalement les polygones récupérés
     window.globalGeofences = [];
-
+    
     async function fetchPolygons() {
       try {
         const geofences = await fetchData(API_BASE_URL + '/API/get-geofences');
         console.log("Polygones reçus:", geofences);
-        window.globalGeofences = geofences; // stockage global
+        window.globalGeofences = geofences;
         
-        // Effacer les anciens calques sauf la couche de fond
+        // Effacer les calques existants sauf la couche de fond
         map.eachLayer(layer => {
-          if (layer.options && layer.options.attribution && layer.options.attribution.includes('OpenStreetMap')) return;
+          if (layer.options && layer.options.attribution && layer.options.attribution.includes('OpenStreetMap'))
+            return;
           map.removeLayer(layer);
         });
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors',
+          attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
         
-        // Pour chaque polygone, créer un calque et un popup
+        // Pour chaque polygone
         geofences.forEach(geofence => {
+          // Construction du polygone Leaflet à partir de GeoJSON
           const leafletCoordinates = geofence.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
           const polygon = L.polygon(leafletCoordinates, {
-            color: geofence.active ? 'green' : 'red',
+            color: geofence.active ? 'green' : 'red'
           }).addTo(map);
           
-          // Construction du contenu du popup :
-          // - Bouton pour supprimer si aucune assignation
-          // - Affichage des assignations existantes
-          // - Option d'assignation du polygone à un node
           let popupContent = `<strong>Polygone :</strong> ${geofence.name} (ID: ${geofence.polygon_id})<br>
                               <button onclick="deleteUnusedPolygon(${geofence.polygon_id})">
                                 Supprimer le polygone s'il n'est pas assigné
@@ -115,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             assignments.forEach(assignment => {
               infoHTML += `<li>
                               Device : ${assignment.device_id} - Actif : ${assignment.active ? 'Oui' : 'Non'}
+                              <br>
                               <select id="activation-hour-${assignment.device_id}-${geofence.polygon_id}">
                                 ${Array.from({ length: 49 }, (_, i) => {
                                   if (i === 48) return `<option value="${i}">Immédiat</option>`;
@@ -132,9 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
                            </li>`;
             });
             infoHTML += '</ul>';
-            // Charger la liste des nodes disponibles pour assignation
+            
+            // Charger la liste des nodes disponibles pour une nouvelle assignation
             fetchData(`${API_BASE_URL}/API/get-nodes`)
             .then(nodes => {
+              // Filtrer pour ne proposer que les nodes non assignés pour ce polygone
               const assigned = assignments.map(a => a.device_id);
               const availableNodes = nodes.filter(n => !assigned.includes(n.device_id));
               let assignOptions = "";
@@ -153,12 +155,12 @@ document.addEventListener('DOMContentLoaded', () => {
               
               const fullPopup = popupContent + infoHTML + "<br>" + assignHTML;
               polygon.bindPopup(fullPopup);
-              // Optionnel : ouvrir le popup dès que le calque est cliqué
               polygon.on('click', () => polygon.openPopup());
             })
             .catch(err => {
               console.error("Erreur lors du chargement des nodes pour assignation:", err);
             });
+            
           })
           .catch(err => {
             console.error("Erreur lors de la récupération des assignations:", err);
@@ -174,11 +176,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-/* ---------------------------------------------------------------------------- 
-   FONCTIONS POUR SUPPRESSION ET ASSIGNATION 
------------------------------------------------------------------------------ */
+/* ---------------------------------------------------------------------
+   Fonctions de suppression et assignation pour manage_geofencing
+--------------------------------------------------------------------- */
 
-// Supprimer un polygone dans geofences si aucun assignement n'existe dans polygon_assignments
+// Supprimer un polygone de geofences (si aucune assignation n'existe)
 async function deleteUnusedPolygon(polygon_id) {
   try {
     const response = await fetch(`${API_BASE_URL}/API/delete-unused-polygon`, {
@@ -189,7 +191,7 @@ async function deleteUnusedPolygon(polygon_id) {
     const result = await response.json();
     if (response.ok) {
       alert(result.message);
-      // Vous pouvez déclencher un fetchPolygons() différé si nécessaire.
+      // Vous pouvez rafraîchir la liste après quelques secondes si souhaité.
     } else {
       alert(result.message);
     }
@@ -199,7 +201,7 @@ async function deleteUnusedPolygon(polygon_id) {
   }
 }
 
-// Assigner un polygone à un node : utiliser l'endpoint assign-geofence
+// Assigner un polygone à un node via l'endpoint assign-geofence
 async function assignPolygonToNode(polygon_id) {
   const nodeSelect = document.getElementById(`node-select-${polygon_id}`);
   if (!nodeSelect) {
@@ -208,7 +210,7 @@ async function assignPolygonToNode(polygon_id) {
   }
   const device_id = nodeSelect.value;
   
-  // Rechercher le polygone dans la liste globale
+  // Vérifier que le polygone est présent dans la liste globale
   const geofences = window.globalGeofences || [];
   const polygon = geofences.find(g => g.polygon_id == polygon_id);
   if (!polygon) {
@@ -220,7 +222,7 @@ async function assignPolygonToNode(polygon_id) {
     const response = await fetch(`${API_BASE_URL}/API/assign-geofence`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // Ici, n'envoyer que le polygon_id et le device_id
+      // Envoyer uniquement polygon_id et device_id (la géométrie est récupérée côté back)
       body: JSON.stringify({
         polygon_id: polygon.polygon_id,
         device_id
@@ -229,7 +231,7 @@ async function assignPolygonToNode(polygon_id) {
     const result = await response.json();
     if (response.ok) {
       alert(result.message);
-      // Vous pouvez rafraîchir les assignations après quelques secondes si besoin.
+      // Vous pouvez rafraîchir la liste des assignations après un délai si nécessaire.
     } else {
       alert(result.message);
     }
@@ -238,16 +240,30 @@ async function assignPolygonToNode(polygon_id) {
     alert("Erreur lors de l'assignation du polygone.");
   }
 }
+
+/* ---------------------------------------------------------
+   SECTION : Gestion du polygone dans draw_geofencing.html
+   (Création & Enregistrement dans geofences uniquement)
+--------------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('geofencing-map')) {
-    const map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+    // Si la carte n'est pas encore initialisée
+    let map;
+    const mapContainer = document.getElementById('geofencing-map');
+    if (!mapContainer._leaflet_id) {
+      map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+    } else {
+      map = L.map('geofencing-map');
+    }
     
+    // Groupe de calques pour le polygone dessiné
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     
+    // Ajout du contrôle de dessin
     const drawControl = new L.Control.Draw({
       edit: { featureGroup: drawnItems },
       draw: {
@@ -255,8 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
         polyline: false,
         rectangle: false,
         circle: false,
-        marker: false,
-      },
+        marker: false
+      }
     });
     map.addControl(drawControl);
     
@@ -267,129 +283,30 @@ document.addEventListener('DOMContentLoaded', () => {
       drawnItems.addLayer(drawnPolygon);
     });
     
-    // Charger les nodes pour remplir le select de la page draw_geofencing
-    async function loadNodes() {
-      try {
-        const nodes = await fetchData(API_BASE_URL + '/API/get-nodes');
-        console.log("Nodes récupérés :", nodes);
-        const nodeSelectElem = document.getElementById('node-select');
-        if (nodeSelectElem) {
-          nodeSelectElem.innerHTML = "";
-          nodes.forEach(node => {
-            const option = document.createElement('option');
-            // Utiliser node.device_id comme valeur
-            option.value = node.device_id;
-            // Afficher "name (device_id)" par exemple
-            option.text = `${node.name || node.nom || node.device_id} (${node.device_id})`;
-            nodeSelectElem.appendChild(option);
-          });
-        } else {
-          console.warn("L'élément #node-select est introuvable sur la page draw_geofencing.");
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des nodes :", error);
-      }
-    }
-
-    // Charger dès l'initialisation de draw_geofencing
-    loadNodes();
-    
+    // Bouton d'enregistrement (utilise l'endpoint create-geofence)
     document.getElementById('save-polygon').addEventListener('click', () => {
       const polygonName = document.getElementById('polygon-name').value;
-      const nodeSelect = document.getElementById('node-select');
-      // Récupération des device_id sélectionnés
-      const selectedNodes = Array.from(nodeSelect.selectedOptions).map(option => option.value);
-      
-      if (drawnPolygon && polygonName && selectedNodes.length > 0) {
-        const polygonData = {
-          name: polygonName,
-          geometry: drawnPolygon.toGeoJSON().geometry,
-          active: false,
-          nodes: selectedNodes  // Pour la segmentation downlink
-        };
-        console.log("Envoi du polygone avec nodes:", polygonData);
-        // Utilisation de l'endpoint create-geofence pour juste créer le polygone
-        fetchData(API_BASE_URL + '/API/create-geofence', 'POST', polygonData)
-          .then(response => {
-            console.log('Réponse du backend:', response);
-            response ? alert('Polygone créé avec succès!') : alert('Insertion réussie sans retour de données.');
-          })
-          .catch(error => {
-            console.error("Erreur lors de l'enregistrement du polygone:", error);
-          });
-      } else {
-        alert('Veuillez tracer un polygone, entrer un nom et sélectionner au moins un node.');
+      if (!drawnPolygon || !polygonName) {
+        alert('Veuillez tracer un polygone et entrer un nom.');
+        return;
       }
+      
+      // Préparer les données à envoyer : uniquement name et geometry
+      const polygonData = {
+        name: polygonName,
+        geometry: drawnPolygon.toGeoJSON().geometry
+      };
+      console.log("Envoi du polygone (draw):", polygonData);
+      
+      fetchData(API_BASE_URL + '/API/create-geofence', 'POST', polygonData)
+        .then(response => {
+          console.log('Réponse du backend (create-geofence):', response);
+          alert('Polygone enregistré avec succès!');
+        })
+        .catch(error => {
+          console.error("Erreur lors de l'enregistrement du polygone:", error);
+          alert("Erreur lors de l'enregistrement du polygone.");
+        });
     });
   }
-});
-
-/* ---------------------------------------------------------------------
-   GESTION DU POLYGONE POUR LA PAGE draw_geofencing.html
-   (Création & Enregistrement dans geofences uniquement)
---------------------------------------------------------------------- */
-document.addEventListener('DOMContentLoaded', () => {
-  // Vérifier si la carte est déjà initialisée
-  if (!document.getElementById('geofencing-map')._leaflet_id) {
-    var map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
-  } else {
-    // Si la carte est déjà initialisée, on la réutilise
-    var map = L.map('geofencing-map');
-  }
-  
-  // Créer et ajouter un groupe de calques pour le polygone dessiné
-  const drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
-  
-  // Ajouter le contrôle de dessin
-  const drawControl = new L.Control.Draw({
-    edit: { featureGroup: drawnItems },
-    draw: {
-      polygon: true,
-      polyline: false,
-      rectangle: false,
-      circle: false,
-      marker: false,
-    },
-  });
-  map.addControl(drawControl);
-  
-  let drawnPolygon = null;
-  map.on(L.Draw.Event.CREATED, function (event) {
-    drawnItems.clearLayers(); // On efface les anciens dessins
-    drawnPolygon = event.layer;
-    drawnItems.addLayer(drawnPolygon);
-  });
-    
-  // Bouton d'enregistrement du polygone
-  document.getElementById('save-polygon').addEventListener('click', () => {
-    const polygonName = document.getElementById('polygon-name').value;
-    
-    // Vérifier la présence d'un polygone dessiné et d'un nom
-    if (!drawnPolygon || !polygonName) {
-      alert('Veuillez tracer un polygone et entrer un nom.');
-      return;
-    }
-    
-    // Préparer les données à envoyer : name et geometry uniquement.
-    const polygonData = {
-      name: polygonName,
-      geometry: drawnPolygon.toGeoJSON().geometry
-    };
-    console.log("Envoi du polygone (draw):", polygonData);
-    
-    // Utilisation de l'endpoint create-geofence pour créer le polygone dans geofences
-    fetchData(API_BASE_URL + '/API/create-geofence', 'POST', polygonData)
-      .then(response => {
-        console.log('Réponse du backend (create-geofence):', response);
-        alert('Polygone enregistré avec succès!');
-      })
-      .catch(error => {
-        console.error("Erreur lors de l'enregistrement du polygone:", error);
-        alert("Erreur lors de l'enregistrement du polygone.");
-      });
-  });
 });
