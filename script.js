@@ -23,6 +23,7 @@ async function fetchData(url, method = 'GET', body = null) {
   return null;
 }
 
+
 /* 
 Fonction pour mettre à jour une assignation.
 Actions : 1 = activer, 2 = désactiver, 3 = supprimer.
@@ -325,71 +326,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ---------------------------------------------------------------------
    GESTION DU POLYGONE POUR LA PAGE draw_geofencing.html
-   (Utilisé uniquement pour tracer un polygone et l'enregistrer)
+   (Création & Enregistrement dans geofences uniquement)
 --------------------------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('geofencing-map')) {
-    // Initialisation de la carte
-    const map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
+  // Vérifier si la carte est déjà initialisée
+  if (!document.getElementById('geofencing-map')._leaflet_id) {
+    var map = L.map('geofencing-map').setView([48.8566, 2.3522], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
-    
-    // Configuration du groupe de calques pour le polygon dessiné
-    const drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-    
-    // Ajout des outils de dessin de Leaflet Draw
-    const drawControl = new L.Control.Draw({
-      edit: { featureGroup: drawnItems },
-      draw: {
-        polygon: true,
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        marker: false,
-      },
-    });
-    map.addControl(drawControl);
-    
-    let drawnPolygon = null;
-    map.on(L.Draw.Event.CREATED, function (event) {
-      drawnItems.clearLayers(); // On supprime les anciens dessins
-      drawnPolygon = event.layer;
-      drawnItems.addLayer(drawnPolygon);
-    });
-    
-    // Bouton "save-polygon" pour enregistrer le polygone
-    document.getElementById('save-polygon').addEventListener('click', () => {
-      const polygonName = document.getElementById('polygon-name').value;
-      
-      // Vérifier la présence d'un polygone dessiné et d'un nom
-      if (!drawnPolygon || !polygonName) {
-        alert('Veuillez tracer un polygone et entrer un nom.');
-        return;
-      }
-      
-      // Préparer les données à envoyer : uniquement name et geometry
-      const polygonData = {
-        name: polygonName,
-        geometry: drawnPolygon.toGeoJSON().geometry
-      };
-      console.log("Envoi du polygone (draw) :", polygonData);
-      
-      // Appeler l'endpoint create-geofence pour créer le polygone dans geofences
-      fetchData(API_BASE_URL + '/API/create-geofence', 'POST', polygonData)
-        .then(response => {
-          console.log('Réponse du backend (create-geofence) :', response);
-          if (response) {
-            alert('Polygone enregistré avec succès!');
-          } else {
-            alert('Insertion réussie sans retour de données.');
-          }
-        })
-        .catch(error => {
-          console.error("Erreur lors de l'enregistrement du polygone:", error);
-          alert("Erreur lors de l'enregistrement du polygone.");
-        });
-    });
+  } else {
+    // Si la carte est déjà initialisée, on la réutilise
+    var map = L.map('geofencing-map');
   }
+  
+  // Créer et ajouter un groupe de calques pour le polygone dessiné
+  const drawnItems = new L.FeatureGroup();
+  map.addLayer(drawnItems);
+  
+  // Ajouter le contrôle de dessin
+  const drawControl = new L.Control.Draw({
+    edit: { featureGroup: drawnItems },
+    draw: {
+      polygon: true,
+      polyline: false,
+      rectangle: false,
+      circle: false,
+      marker: false,
+    },
+  });
+  map.addControl(drawControl);
+  
+  let drawnPolygon = null;
+  map.on(L.Draw.Event.CREATED, function (event) {
+    drawnItems.clearLayers(); // On efface les anciens dessins
+    drawnPolygon = event.layer;
+    drawnItems.addLayer(drawnPolygon);
+  });
+    
+  // Bouton d'enregistrement du polygone
+  document.getElementById('save-polygon').addEventListener('click', () => {
+    const polygonName = document.getElementById('polygon-name').value;
+    
+    // Vérifier la présence d'un polygone dessiné et d'un nom
+    if (!drawnPolygon || !polygonName) {
+      alert('Veuillez tracer un polygone et entrer un nom.');
+      return;
+    }
+    
+    // Préparer les données à envoyer : name et geometry uniquement.
+    const polygonData = {
+      name: polygonName,
+      geometry: drawnPolygon.toGeoJSON().geometry
+    };
+    console.log("Envoi du polygone (draw):", polygonData);
+    
+    // Utilisation de l'endpoint create-geofence pour créer le polygone dans geofences
+    fetchData(API_BASE_URL + '/API/create-geofence', 'POST', polygonData)
+      .then(response => {
+        console.log('Réponse du backend (create-geofence):', response);
+        alert('Polygone enregistré avec succès!');
+      })
+      .catch(error => {
+        console.error("Erreur lors de l'enregistrement du polygone:", error);
+        alert("Erreur lors de l'enregistrement du polygone.");
+      });
+  });
 });
