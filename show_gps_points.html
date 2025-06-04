@@ -26,9 +26,10 @@
     <label for="datePicker">Date :</label>
     <input type="date" id="datePicker"/>
 
-    <label for="deviceSelector">Appareils :</label>
-    <!-- Le select est vide, il sera rempli dynamiquement -->
-    <select id="deviceSelector" multiple></select>
+    <fieldset id="deviceCheckboxContainer">
+      <legend>Appareils :</legend>
+      <!-- Les cases seront injectées ici par le script -->
+    </fieldset>
 
     <label for="positionSlider">Position (indice) :</label>
     <input type="range" id="positionSlider" min="0" max="0" value="0"/>

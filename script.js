@@ -3,7 +3,7 @@ const API_BASE_URL = 'https://geofencing-8a9755fd6a46.herokuapp.com';
 console.log("API_BASE_URL:", API_BASE_URL);
 let map;  // Variable globale pour la carte
 
-// Fonction générique pour effectuer des requêtes AJAX vers le backend.
+// Fonction générique pour effectuer des requêtes AJAX
 async function fetchData(url, method = 'GET', body = null) {
   console.log("fetchData appelé avec:", url, method, body);
   const response = await fetch(url, {
@@ -21,61 +21,81 @@ async function fetchData(url, method = 'GET', body = null) {
   }
   return null;
 }
-// Fonction pour récupérer et afficher les geofences (identique à manage_geofencing)
+
+// Fonction pour récupérer et afficher les geofences (architecture identique à manage_geofencing)
 async function fetchGeofences() {
   try {
-    // Récupération via l'endpoint
     let polys = await fetchData(`${API_BASE_URL}/API/get-geofences`);
-    // On suppose ici que l'endpoint renvoie directement un tableau d'objets
-    // avec au moins les propriétés "polygon_id" et "geometry".
-    window.globalGeofences = polys; // Réutilisation de la variable globale
+    // On suppose que l'endpoint renvoie un tableau d'objets avec au moins "polygon_id" et "geometry"
+    window.globalGeofences = polys;
     createGeofenceLayers();
   } catch (err) {
     console.error("Erreur lors du chargement des geofences:", err);
   }
 }
 
-
-// Mettez à jour le sélecteur de devices à partir de l'endpoint /API/get-nodes
-async function updateDeviceSelectorFromNodes() {
-  try {
-    const nodes = await fetchData(`${API_BASE_URL}/API/get-nodes`);
-    const deviceSelector = document.getElementById('deviceSelector');
-    if (!deviceSelector) return;
-    // Vider le sélecteur
-    deviceSelector.innerHTML = "";
-    // Ajouter une option pour chaque node trouvé
-    nodes.forEach(node => {
-      const option = document.createElement('option');
-      option.value = node.device_id;
-      option.textContent = node.name ? node.name : node.device_id;
-      deviceSelector.appendChild(option);
-    });
-  } catch (error) {
-    console.error("Erreur lors de la récupération des nodes pour le sélecteur:", error);
-  }
-}
-document.addEventListener('DOMContentLoaded', () => {
-  updateDeviceSelectorFromNodes();
-});
-
 function createGeofenceLayers() {
-  // Parcourir chaque geofence et créer le calque correspondant.
   window.globalGeofences.forEach(poly => {
-    // Attendu : poly.geometry.coordinates[0] contient le contour au format GeoJSON ([lon, lat])
+    // poly.geometry.coordinates[0] doit contenir le contour sous forme de tableau de [longitude, latitude]
     const coords = poly.geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
-    // Création d'un calque polygonal, ici couleur bleue (vous pouvez adapter la couleur comme dans manage_geofencing si besoin)
+    // Créer le calque avec couleur bleue (vous pouvez adapter la couleur selon vos besoins)
     const layer = L.polygon(coords, { color: 'blue', weight: 2, opacity: 0.6 }).addTo(map);
-    // Stockage de la référence du calque dans l'objet poly
     poly.layer = layer;
     
-    // Lier une popup avec le nom ou l'ID du polygone
+    // Liaison d'une popup (si le champ name existe)
     if (poly.name) {
       layer.bindPopup(poly.name);
     } else {
       layer.bindPopup(`Polygon ID: ${poly.polygon_id}`);
     }
   });
+}
+
+// Fonction pour mettre à jour le conteneur des cases à cocher à partir de l'endpoint /API/get-nodes
+async function updateDeviceCheckboxesFromNodes() {
+  try {
+    const nodes = await fetchData(`${API_BASE_URL}/API/get-nodes`);
+    const container = document.getElementById('deviceCheckboxContainer');
+    if (!container) return;
+    
+    // Conserver la légende et vider le reste
+    container.innerHTML = "<legend>Appareils :</legend>";
+    
+    nodes.forEach(node => {
+      const wrapper = document.createElement('div');
+      wrapper.style.marginBottom = "5px";
+
+      const checkbox = document.createElement('input');
+      checkbox.type = "checkbox";
+      checkbox.id = `device_${node.device_id}`;
+      checkbox.value = node.device_id;
+      
+      const label = document.createElement('label');
+      label.htmlFor = checkbox.id;
+      label.textContent = node.name ? node.name : node.device_id;
+      
+      wrapper.appendChild(checkbox);
+      wrapper.appendChild(label);
+      container.appendChild(wrapper);
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des nodes pour les cases à cocher:", error);
+  }
+}
+
+// Fonction pour récupérer les device_id cochés
+function getSelectedDevices() {
+  const container = document.getElementById('deviceCheckboxContainer');
+  if (!container) return [];
+  // Chercher toutes les cases à cocher dans ce conteneur
+  const checkboxes = container.querySelectorAll("input[type='checkbox']");
+  const selected = [];
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      selected.push(cb.value);
+    }
+  });
+  return selected;
 }
 
 /* 
@@ -491,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOM complètement chargé pour show_gps_points.html");
 
-  // INITIALISATION DE LA CARTE (utilisation de la variable globale map)
+  // INITIALISATION DE LA CARTE : on utilise la variable globale "map" sans redéclaration locale.
   const mapDiv = document.getElementById('gps-map');
   if (!mapDiv) {
     console.error("La div avec l'id 'gps-map' est introuvable");
@@ -499,7 +519,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   console.log("mapDiv trouvé, hauteur:", mapDiv.clientHeight);
   
-  // IMPORTANT : assurez-vous de ne pas redéclarer map
   map = L.map('gps-map').setView([46.8, 2.4], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -509,32 +528,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Récupération des éléments de contrôle
   const datePicker = document.getElementById('datePicker');
-  const deviceSelector = document.getElementById('deviceSelector');
   const loadMoreButton = document.getElementById('loadMore');
   const positionSlider = document.getElementById('positionSlider');
   const sliderValueSpan = document.getElementById('sliderValue');
 
-  if (!datePicker || !deviceSelector || !loadMoreButton || !positionSlider) {
+  // Vérifier la présence des contrôles obligatoires
+  if (!datePicker || !loadMoreButton || !positionSlider) {
     console.error("Certains éléments de contrôle sont introuvables");
     return;
   }
 
   // Variables globales pour les points GPS
-  let pointsByDevice = {};
-  let currentOffset = 0; // indice de la position affichée par device
+  let pointsByDevice = {}; // Objet : { device_id: [points triés par timestamp décroissant] }
+  let currentOffset = 0;   // Indice de la position affichée par device (0 = dernier point connu)
 
   // Fonction de récupération des points GPS
   async function fetchGPSPoints(initialLoad = false) {
     try {
       const selectedDate = datePicker.value || new Date().toISOString().split("T")[0];
-      const selectedDevices = Array.from(deviceSelector.selectedOptions).map(opt => opt.value);
+      // Récupérer la liste des devices cochés via les checkboxes
+      const selectedDevices = getSelectedDevices();
       
       let url = `${API_BASE_URL}/api/gpspoints?date=${selectedDate}&limit=100`;
       console.log("URL de récupération:", url);
       const response = await fetchData(url);
       console.log("Réponse de fetchGPSPoints:", response);
       if (response && response.data) {
-        // Filtrer par device si une sélection existe
         let points = response.data;
         if (selectedDevices.length > 0) {
           points = points.filter(pt => selectedDevices.includes(pt.device_id));
@@ -548,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const dev in pointsByDevice) {
           pointsByDevice[dev].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         }
-        // Mise à jour du slider
+        // Mise à jour du slider selon le nombre maximum de points récupéré par device
         const maxOffset = Math.max(...Object.values(pointsByDevice).map(arr => arr.length)) - 1;
         positionSlider.max = maxOffset >= 0 ? maxOffset : 0;
         sliderValueSpan.textContent = currentOffset;
@@ -566,7 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       window.markersLayer = L.layerGroup().addTo(map);
     }
-    // Pour chaque device, afficher le point selon currentOffset
+    // Pour chaque device, afficher le point sélectionné (ou le dernier disponible)
     for (const dev in pointsByDevice) {
       const pts = pointsByDevice[dev];
       const pointToShow = pts[currentOffset] || pts[pts.length - 1];
@@ -585,7 +604,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchGPSPoints();
   });
 
-  deviceSelector.addEventListener('change', () => {
+  // Ajout d'un écouteur sur le conteneur des checkboxes pour détecter tout changement
+  document.getElementById('deviceCheckboxContainer').addEventListener('change', () => {
     currentOffset = 0;
     sliderValueSpan.textContent = currentOffset;
     fetchGPSPoints();
@@ -605,11 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
     datePicker.value = new Date().toISOString().split("T")[0];
   }
 
-  // Appel initial pour charger les points et alimenter le sélecteur des devices
-  updateDeviceSelectorFromNodes();
+  // Appel initial pour charger les points
+  updateDeviceCheckboxesFromNodes();
   fetchGPSPoints();
   
-  // Charge également les geofences (en utilisant la même architecture que manage_geofencing)
-  // La fonction fetchGeofences() est déjà définie plus haut et utilise globalement "map".
+  // Charge également les geofences (l'architecture se base sur celle de manage_geofencing)
   fetchGeofences();
 });
