@@ -434,25 +434,38 @@ document.addEventListener('DOMContentLoaded', () => {
    (Affichage des positions)
 ============================== */
 document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM complètement chargé pour show_gps_points.html");
 
-  // Initialise la carte Leaflet (centrez selon vos besoins)
+  // Vérifier que la div de la carte existe et a une hauteur (surtout dans l'inspecteur de navigateur)
+  const mapDiv = document.getElementById('gps-map');
+  if (!mapDiv) {
+    console.error("La div avec l'id 'gps-map' est introuvable");
+    return;
+  }
+  console.log("mapDiv trouvé, hauteur:", mapDiv.clientHeight);
+
+  // Initialisation de la carte Leaflet (centrez-la selon vos besoins)
   const map = L.map('gps-map').setView([46.8, 2.4], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap'
   }).addTo(map);
+  console.log("Carte Leaflet initialisée");
 
   // Récupération des éléments de contrôle
   const datePicker = document.getElementById('datePicker');
   const loadMoreButton = document.getElementById('loadMore');
-  
+  if (!datePicker) console.error("L'élément #datePicker n'existe pas");
+  if (!loadMoreButton) console.error("L'élément #loadMore n'existe pas");
+
   // Initialisations globales pour la pagination
   let points = [];       // Stocke tous les points récupérés pour la date choisie
-  let cursor = null;     // Timestamp du dernier (le plus ancien) point affiché (pour paginer)
-  
+  let cursor = null;     // Timestamp du dernier point affiché (pour paginer)
+
   // Fonction de récupération des points depuis le backend
   async function fetchGPSPoints(initialLoad = false) {
     try {
+      console.log("fetchGPSPoints déclenché, initialLoad =", initialLoad);
       // Sélection de la date depuis le sélecteur (défaut : aujourd'hui)
       const selectedDate = datePicker.value || new Date().toISOString().split("T")[0];
       let url = `${API_BASE_URL}/api/gpspoints?date=${selectedDate}&limit=10`;
@@ -461,13 +474,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (cursor) {
         url += `&cursor=${encodeURIComponent(cursor)}`;
       }
-      
+
       console.log("Récupération des points depuis:", url);
       const response = await fetchData(url);
+      console.log("Réponse de fetchGPSPoints:", response);
       if (response && response.data) {
         const newPoints = response.data;
         if (newPoints.length > 0) {
-          // Met à jour le curseur : on prend le timestamp du dernier point de cette page (plus ancien)
+          // Met à jour le curseur : on prend le timestamp du dernier point (le plus ancien) de cette page
           cursor = newPoints[newPoints.length - 1].timestamp;
           // Ajoute les nouveaux points au tableau global
           points = points.concat(newPoints);
@@ -475,13 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           // Si aucun point n'est renvoyé, désactive le bouton "Charger plus"
           loadMoreButton.disabled = true;
+          console.log("Aucun nouveau point retourné pour cette page");
         }
       }
     } catch (error) {
       console.error("Erreur lors du chargement des points GPS:", error);
     }
   }
-  
+
   // Fonction pour afficher les marqueurs sur la carte
   function renderMarkers() {
     // Utilisation d'une couche dédiée pour gérer les marqueurs
@@ -497,28 +512,30 @@ document.addEventListener('DOMContentLoaded', () => {
       window.markersLayer.addLayer(marker);
     });
   }
-  
+
   // Lorsque l'utilisateur change la date, réinitialiser les données et charger la nouvelle date
   if (datePicker) {
     datePicker.addEventListener('change', () => {
-      // Réinitialisation
+      console.log("Date modifiée, réinitialisation...");
       points = [];
       cursor = null;
       loadMoreButton.disabled = false;
       fetchGPSPoints(true);
     });
   }
-  
+
   // Bouton "Charger plus" pour charger des points plus anciens
   if (loadMoreButton) {
     loadMoreButton.addEventListener('click', () => {
+      console.log("Bouton 'Charger plus' cliqué");
       fetchGPSPoints();
     });
   }
-  
-  // Chargement initial : on définit la date par défaut sur aujourd'hui si non défini
+
+  // Mise en place de la date par défaut si non définie
   if (!datePicker.value) {
     datePicker.value = new Date().toISOString().split("T")[0];
   }
+  // Chargement initial des points
   fetchGPSPoints();
 });
