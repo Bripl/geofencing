@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   console.log("mapDiv trouvé, hauteur:", mapDiv.clientHeight);
   
-  const map = L.map('gps-map').setView([46.8, 2.4], 6);
+  map = L.map('gps-map').setView([46.8, 2.4], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap'
