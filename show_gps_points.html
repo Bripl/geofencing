@@ -8,6 +8,7 @@
     body { font-family: Arial, sans-serif; margin: 2em; }
     nav a { margin-right: 1em; }
     #gps-map { height: 600px; margin-top: 1em; }
+    #controls { margin-bottom: 1em; }
   </style>
 </head>
 <body>
@@ -18,6 +19,13 @@
     <a href="manage_geofencing.html">Gérer les polygones</a>
     <a href="add-device.html">Ajouter un node</a>
   </nav>
+
+  <!-- Contrôles de filtrage -->
+  <div id="controls">
+    <label for="datePicker">Date :</label>
+    <input type="date" id="datePicker"/> 
+    <button id="loadMore">Charger plus</button>
+  </div>
 
   <!-- Carte pour afficher les points GPS -->
   <div id="gps-map"></div>
