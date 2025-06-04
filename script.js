@@ -482,6 +482,9 @@ document.addEventListener('DOMContentLoaded', () => {
     attribution: '© OpenStreetMap'
   }).addTo(map);
   console.log("Carte Leaflet initialisée");
+  
+  // Rendre la carte accessible globalement
+  window.map = map;
 
   // Récupération des éléments de contrôle
   const datePicker = document.getElementById('datePicker');
