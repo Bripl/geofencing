@@ -433,18 +433,18 @@ document.addEventListener('DOMContentLoaded', () => {
    SECTION : Page show_gps_points.html
    (Affichage des positions)
 ============================== */
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOM complètement chargé pour show_gps_points.html");
 
-  // Vérifier que la div de la carte existe et a une hauteur (surtout dans l'inspecteur de navigateur)
+  // INITIALISATION DE LA CARTE
   const mapDiv = document.getElementById('gps-map');
   if (!mapDiv) {
     console.error("La div avec l'id 'gps-map' est introuvable");
     return;
   }
   console.log("mapDiv trouvé, hauteur:", mapDiv.clientHeight);
-
-  // Initialisation de la carte Leaflet (centrez-la selon vos besoins)
+  
   const map = L.map('gps-map').setView([46.8, 2.4], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -454,88 +454,139 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Récupération des éléments de contrôle
   const datePicker = document.getElementById('datePicker');
+  const deviceSelector = document.getElementById('deviceSelector');
   const loadMoreButton = document.getElementById('loadMore');
-  if (!datePicker) console.error("L'élément #datePicker n'existe pas");
-  if (!loadMoreButton) console.error("L'élément #loadMore n'existe pas");
+  const positionSlider = document.getElementById('positionSlider');
+  const sliderValueSpan = document.getElementById('sliderValue');
 
-  // Initialisations globales pour la pagination
-  let points = [];       // Stocke tous les points récupérés pour la date choisie
-  let cursor = null;     // Timestamp du dernier point affiché (pour paginer)
+  if (!datePicker || !deviceSelector || !loadMoreButton || !positionSlider) {
+    console.error("Certains éléments de contrôle sont introuvables");
+    return;
+  }
 
-  // Fonction de récupération des points depuis le backend
+  // Variables globales
+  let pointsByDevice = {}; // objet: { device_id: [points triés par timestamp décroissant] }
+  let globalCursor = null; // pour la pagination globale (si besoin)
+  let currentOffset = 0;   // indice de la position affichée par device (0 = position la plus récente)
+
+  // Fonction de récupération des points via API
   async function fetchGPSPoints(initialLoad = false) {
     try {
-      console.log("fetchGPSPoints déclenché, initialLoad =", initialLoad);
-      // Sélection de la date depuis le sélecteur (défaut : aujourd'hui)
+      // Utiliser la date du sélecteur (ou aujourd'hui)
       const selectedDate = datePicker.value || new Date().toISOString().split("T")[0];
-      let url = `${API_BASE_URL}/api/gpspoints?date=${selectedDate}&limit=10`;
-
-      // Lorsque cursor a déjà été défini, on l'ajoute pour paginer
-      if (cursor) {
-        url += `&cursor=${encodeURIComponent(cursor)}`;
-      }
-
-      console.log("Récupération des points depuis:", url);
+      // Récupération de la liste des devices sélectionnés (si aucun n'est sélectionné, prendre tous les devices)
+      const selectedDevices = Array.from(deviceSelector.selectedOptions).map(opt => opt.value);
+      
+      let url = `${API_BASE_URL}/api/gpspoints?date=${selectedDate}&limit=100`;
+      // On peut ajouter éventuellement un paramètre "device_ids" si le backend le supporte.
+      // Sinon, on récupère tous les points de la journée et on les filtrera côté client.
+      console.log("URL de récupération:", url);
       const response = await fetchData(url);
       console.log("Réponse de fetchGPSPoints:", response);
       if (response && response.data) {
-        const newPoints = response.data;
-        if (newPoints.length > 0) {
-          // Met à jour le curseur : on prend le timestamp du dernier point (le plus ancien) de cette page
-          cursor = newPoints[newPoints.length - 1].timestamp;
-          // Ajoute les nouveaux points au tableau global
-          points = points.concat(newPoints);
-          renderMarkers();
-        } else {
-          // Si aucun point n'est renvoyé, désactive le bouton "Charger plus"
-          loadMoreButton.disabled = true;
-          console.log("Aucun nouveau point retourné pour cette page");
+        // Filtrer par device si une sélection existe
+        let points = response.data;
+        if (selectedDevices.length > 0) {
+          points = points.filter(pt => selectedDevices.includes(pt.device_id));
         }
+        // Grouper les points par device et trier par timestamp décroissant
+        pointsByDevice = points.reduce((acc, pt) => {
+          if (!acc[pt.device_id]) acc[pt.device_id] = [];
+          acc[pt.device_id].push(pt);
+          return acc;
+        }, {});
+        // Trier chaque tableau par timestamp décroissant
+        for (const dev in pointsByDevice) {
+          pointsByDevice[dev].sort((a, b) => (new Date(b.timestamp)) - (new Date(a.timestamp)));
+        }
+
+        // Mettre à jour le slider : définir la valeur max globale à la plus grande longueur-1
+        const maxOffset = Math.max(...Object.values(pointsByDevice).map(arr => arr.length)) - 1;
+        positionSlider.max = maxOffset >= 0 ? maxOffset : 0;
+        sliderValueSpan.textContent = currentOffset;
+        renderMarkers();
       }
     } catch (error) {
       console.error("Erreur lors du chargement des points GPS:", error);
     }
   }
 
-  // Fonction pour afficher les marqueurs sur la carte
+  // Fonction pour afficher les marqueurs pour chaque device selon currentOffset
   function renderMarkers() {
-    // Utilisation d'une couche dédiée pour gérer les marqueurs
     if (window.markersLayer) {
       window.markersLayer.clearLayers();
     } else {
       window.markersLayer = L.layerGroup().addTo(map);
     }
-    // Pour chaque point, créer un marqueur et ajouter une popup avec les infos (device_id et timestamp)
-    points.forEach(pt => {
-      const marker = L.marker([pt.latitude, pt.longitude])
-        .bindPopup(`<strong>Device :</strong> ${pt.device_id}<br/><strong>Time :</strong> ${pt.timestamp}`);
-      window.markersLayer.addLayer(marker);
-    });
+    // Pour chaque device, afficher le point correspondant à currentOffset (ou le dernier disponible)
+    for (const dev in pointsByDevice) {
+      const devicePoints = pointsByDevice[dev];
+      let pointToShow = devicePoints[currentOffset] || devicePoints[devicePoints.length - 1];
+      if (pointToShow) {
+        const marker = L.marker([pointToShow.latitude, pointToShow.longitude])
+          .bindPopup(`<strong>Device :</strong> ${dev}<br/><strong>Time :</strong> ${pointToShow.timestamp}`);
+        window.markersLayer.addLayer(marker);
+      }
+    }
   }
 
-  // Lorsque l'utilisateur change la date, réinitialiser les données et charger la nouvelle date
-  if (datePicker) {
-    datePicker.addEventListener('change', () => {
-      console.log("Date modifiée, réinitialisation...");
-      points = [];
-      cursor = null;
-      loadMoreButton.disabled = false;
-      fetchGPSPoints(true);
-    });
-  }
+  // Événement sur le sélecteur de date : recharger les points
+  datePicker.addEventListener('change', () => {
+    console.log("Date modifiée, rechargement...");
+    currentOffset = 0;
+    sliderValueSpan.textContent = currentOffset;
+    fetchGPSPoints();
+  });
 
-  // Bouton "Charger plus" pour charger des points plus anciens
-  if (loadMoreButton) {
-    loadMoreButton.addEventListener('click', () => {
-      console.log("Bouton 'Charger plus' cliqué");
-      fetchGPSPoints();
-    });
-  }
+  // Événement sur le sélecteur des devices
+  deviceSelector.addEventListener('change', () => {
+    console.log("Devices modifiés, rechargement...");
+    currentOffset = 0;
+    sliderValueSpan.textContent = currentOffset;
+    fetchGPSPoints();
+  });
 
-  // Mise en place de la date par défaut si non définie
+  // Événement sur le curseur de position
+  positionSlider.addEventListener('input', () => {
+    currentOffset = parseInt(positionSlider.value, 10);
+    sliderValueSpan.textContent = currentOffset;
+    renderMarkers();
+  });
+
+  // Bouton "Charger plus" si vous souhaitez charger des points à partir d'une pagination (optionnel)
+  loadMoreButton.addEventListener('click', () => {
+    // Ici, à titre d'exemple, on recharge tout (si vous avez mis en place une pagination sur le backend, adaptez)
+    fetchGPSPoints();
+  });
+
+  // Chargement initial : définir la date par défaut et lancer la récupération
   if (!datePicker.value) {
     datePicker.value = new Date().toISOString().split("T")[0];
   }
-  // Chargement initial des points
   fetchGPSPoints();
+
+  // Affichage des geofences
+  async function fetchGeofences() {
+    try {
+      const response = await fetchData(`${API_BASE_URL}/API/get-geofences`);
+      if (response) {
+        // On suppose que le backend renvoie des objets GeoJSON ou compatible.
+        // Si 'geometry' ou 'polygon' est dans la réponse, adaptater en conséquence.
+        // Ici, on utilise L.geoJSON pour afficher les polygones.
+        const geofencesLayer = L.geoJSON(response, {
+          style: function(feature) {
+            return { color: '#3388ff', weight: 2, opacity: 0.6 };
+          },
+          onEachFeature: function(feature, layer) {
+            if (feature.properties && feature.properties.name) {
+              layer.bindPopup(feature.properties.name);
+            }
+          }
+        }).addTo(map);
+      }
+    } catch (err) {
+      console.error("Erreur lors du chargement des geofences:", err);
+    }
+  }
+  fetchGeofences();
 });
