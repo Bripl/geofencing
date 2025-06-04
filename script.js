@@ -149,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.globalGeofences = [];   // Table de geofences
   window.globalNodes = [];       // Liste des nodes
   window.globalAssignments = []; // Format { polygon_id, device_id, active }
+  const API_BASE_URL = 'https://geofencing-8a9755fd6a46.herokuapp.com';
   
   // Fonction générique de récupération
   async function fetchData(url, method = 'GET', body = null) {
@@ -228,8 +229,32 @@ document.addEventListener('DOMContentLoaded', () => {
       const div = document.createElement('div');
       div.style.cursor = 'pointer';
       div.style.marginBottom = '5px';
-      // On n'applique pas la couleur sur le texte ici.
-      div.textContent = `${poly.name} (ID: ${poly.polygon_id})`;
+      // Afficher nom et ID du polygone
+      div.textContent = `${poly.name || "Sans nom"} (ID: ${poly.polygon_id}) `;
+      
+      // Si le polygone n'est pas assigné, ajouter le bouton "Supprimer"
+      if (!poly.assigned) {
+        const btnDelete = document.createElement('button');
+        btnDelete.textContent = "Supprimer";
+        btnDelete.style.marginLeft = "10px";
+        btnDelete.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm("Confirmez la suppression de ce polygone non assigné.")) {
+            try {
+              await deleteUnusedPolygon(poly.polygon_id);
+              alert("Polygone supprimé avec succès.");
+              // Rafraîchir les polygones et l'affichage
+              await fetchAllPolygons();
+              createPolygonLayers();
+              renderPolygonList();
+            } catch (err) {
+              alert("Erreur lors de la suppression : " + err.message);
+            }
+          }
+        });
+        div.appendChild(btnDelete);
+      }
+      
       div.addEventListener('click', () => selectPolygon(poly));
       polyListDiv.appendChild(div);
     });
@@ -249,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
       div.style.cursor = 'pointer';
       div.style.marginBottom = '5px';
       div.textContent = node.name || node.device_id;
-      // Au clic sur le node, on surlignera ses polygones assignés sur la carte.
+      // Au clic sur le node, surligner les polygones assignés
       div.addEventListener('click', () => selectNode(node));
       nodeListDiv.appendChild(div);
     });
@@ -339,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
          const selected = Array.from(form.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
          for (const d_id of selected) {
             try {
-               const resp = await fetch(`${API_BASE_URL}/API/assign-geofence`, {
+               const resp = await fetch(API_BASE_URL + '/API/assign-geofence', {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ polygon_id: poly.polygon_id, device_id: d_id })
@@ -377,6 +402,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ne rien afficher dans la sidebar.
   }
   
+  // Fonction pour supprimer un polygone non utilisé via l'endpoint DELETE
+  async function deleteUnusedPolygon(polygon_id) {
+    const response = await fetch(API_BASE_URL + '/API/delete-unused-polygon', {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ polygon_id })
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.message || "Erreur lors de la suppression.");
+    }
+    return await response.json();
+  }
+  
   // Fonction d'initialisation globale.
   async function init() {
     await fetchAllNodes();
@@ -390,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fetchPolygons = fetchAllPolygons;
   window.fetchNodes = fetchAllNodes;
 });
+
 
 /* ===============================
    SECTION : Page draw-geofencing.html
