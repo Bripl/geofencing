@@ -1,7 +1,7 @@
 // Définir l'URL de base de votre backend
 const API_BASE_URL = 'https://geofencing-8a9755fd6a46.herokuapp.com';
 console.log("API_BASE_URL:", API_BASE_URL);
-
+let map;
 /* 
 Fonction générique pour effectuer des requêtes AJAX vers le backend.
 */
@@ -483,9 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }).addTo(map);
   console.log("Carte Leaflet initialisée");
   
-  // Rendre la carte accessible globalement
-  window.map = map;
-
   // Récupération des éléments de contrôle
   const datePicker = document.getElementById('datePicker');
   const deviceSelector = document.getElementById('deviceSelector');
