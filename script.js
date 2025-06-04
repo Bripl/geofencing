@@ -41,7 +41,6 @@ async function fetchGeofences() {
 async function updateDeviceSelectorFromNodes() {
   try {
     const response = await fetchData(`${API_BASE_URL}/API/get-nodes`);
-    // Supposons que la réponse renvoie un tableau d'objets Node avec au moins une propriété "device_id" ou "name"
     const nodes = response;
     const deviceSelector = document.getElementById('deviceSelector');
     if (!deviceSelector) return;
@@ -49,8 +48,7 @@ async function updateDeviceSelectorFromNodes() {
     // Vider le sélecteur existant
     deviceSelector.innerHTML = "";
     
-    // Pour chaque node, ajouter une option.
-    // On utilise par exemple la propriété device_id pour la valeur et le nom (ou device_id) pour le texte.
+    // Pour chaque node, ajouter une option au sélecteur
     nodes.forEach(node => {
       const option = document.createElement('option');
       option.value = node.device_id;
@@ -61,6 +59,10 @@ async function updateDeviceSelectorFromNodes() {
     console.error("Erreur lors de la récupération des nodes pour le sélecteur:", error);
   }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateDeviceSelectorFromNodes();
+});
 
 function createGeofenceLayers() {
   // Parcourir chaque geofence et créer le calque correspondant.

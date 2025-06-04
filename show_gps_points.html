@@ -25,18 +25,15 @@
   <div id="controls">
     <label for="datePicker">Date :</label>
     <input type="date" id="datePicker"/>
-    
+
     <label for="deviceSelector">Appareils :</label>
-    <select id="deviceSelector" multiple>
-      <!-- Vous pouvez ajouter manuellement ou injecter par script -->
-      <option value="gps-test" selected>gps-test</option>
-      <!-- Par exemple d'autres devices -->
-    </select>
-    
+    <!-- Le select est vide, il sera rempli dynamiquement -->
+    <select id="deviceSelector" multiple></select>
+
     <label for="positionSlider">Position (indice) :</label>
     <input type="range" id="positionSlider" min="0" max="0" value="0"/>
     <span id="sliderValue">0</span>
-    
+
     <button id="loadMore">Charger plus</button>
   </div>
 
